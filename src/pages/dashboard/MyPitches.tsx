@@ -13,12 +13,9 @@ import {
   Eye,
   Trash2,
   Plus,
-  Video,
-  X,
-  Volume2,
-  VolumeX
+  Video
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -32,10 +29,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
 import { formatDistanceToNow } from 'date-fns';
 
 interface VideoPitch {
@@ -75,8 +68,6 @@ const MyPitches = () => {
   const { user } = useAuth();
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPitch, setSelectedPitch] = useState<VideoPitch | null>(null);
-  const [muted, setMuted] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -113,6 +104,11 @@ const MyPitches = () => {
       toast({ title: 'Deleted', description: 'Pitch deleted successfully' });
       setPitches(prev => prev.filter(p => p.id !== pitchId));
     }
+  };
+
+  const handlePlayVideo = (pitchId: string) => {
+    // Navigate to browse pitches with the video ID to open it directly
+    navigate(`/dashboard/pitches?video=${pitchId}`);
   };
 
   if (loading) {
@@ -157,7 +153,7 @@ const MyPitches = () => {
               <Card className="overflow-hidden hover:shadow-md transition-shadow">
                 <div 
                   className="relative aspect-video bg-muted cursor-pointer group"
-                  onClick={() => setSelectedPitch(pitch)}
+                  onClick={() => handlePlayVideo(pitch.id)}
                 >
                   {pitch.thumbnail_url ? (
                     <img
@@ -207,7 +203,12 @@ const MyPitches = () => {
                     </div>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -239,55 +240,6 @@ const MyPitches = () => {
           ))}
         </div>
       )}
-
-      {/* Video Player Modal */}
-      <Dialog open={!!selectedPitch} onOpenChange={(open) => !open && setSelectedPitch(null)}>
-        <DialogContent className="max-w-4xl p-0 bg-black border-none overflow-hidden">
-          <AnimatePresence>
-            {selectedPitch && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="relative"
-              >
-                <video
-                  src={selectedPitch.video_url}
-                  className="w-full max-h-[80vh] object-contain"
-                  controls
-                  autoPlay
-                  muted={muted}
-                />
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <button
-                    onClick={() => setMuted(!muted)}
-                    className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                  >
-                    {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                  </button>
-                  <button
-                    onClick={() => setSelectedPitch(null)}
-                    className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                  <h3 className="font-bold text-white text-lg">{selectedPitch.title}</h3>
-                  {selectedPitch.motive && motiveLabels[selectedPitch.motive] && (
-                    <Badge className={cn("mt-1", motiveLabels[selectedPitch.motive].color)}>
-                      {motiveLabels[selectedPitch.motive].label}
-                    </Badge>
-                  )}
-                  {selectedPitch.description && (
-                    <p className="text-white/80 text-sm mt-2">{selectedPitch.description}</p>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

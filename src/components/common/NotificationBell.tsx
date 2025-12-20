@@ -1,98 +1,36 @@
-import { useState, useEffect } from "react";
-import { Bell, MessageCircle, UserPlus, Heart, Briefcase, X } from "lucide-react";
+import { useState } from "react";
+import { Bell, MessageCircle, Heart, Video, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useNotifications } from "@/hooks/useNotifications";
+import { formatDistanceToNow } from "date-fns";
+import { Loader2 } from "lucide-react";
 
-interface Notification {
-  id: string;
-  type: "message" | "connection" | "like" | "investment";
-  title: string;
-  description: string;
-  time: string;
-  read: boolean;
-  avatar?: string;
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "connection",
-    title: "New connection request",
-    description: "Sarah Chen from Stanford wants to connect",
-    time: "2m ago",
-    read: false,
-  },
-  {
-    id: "2",
-    type: "message",
-    title: "New message",
-    description: "Alex: Hey, I saw your pitch and loved it!",
-    time: "15m ago",
-    read: false,
-  },
-  {
-    id: "3",
-    type: "like",
-    title: "Your pitch is trending",
-    description: "Your EcoTrack pitch received 50 new likes",
-    time: "1h ago",
-    read: false,
-  },
-  {
-    id: "4",
-    type: "investment",
-    title: "Investment interest",
-    description: "Sequoia Capital expressed interest in your startup",
-    time: "3h ago",
-    read: true,
-  },
-];
-
-const typeIcons = {
-  message: MessageCircle,
-  connection: UserPlus,
+const typeIcons: Record<string, typeof Heart> = {
   like: Heart,
-  investment: Briefcase,
+  comment: MessageCircle,
+  video: Video,
 };
 
-const typeColors = {
-  message: "text-sky bg-sky/10",
-  connection: "text-mint bg-mint/10",
-  like: "text-pink bg-pink/10",
-  investment: "text-foreground bg-secondary",
+const typeColors: Record<string, string> = {
+  like: "text-pink-500 bg-pink-500/10",
+  comment: "text-blue-500 bg-blue-500/10",
+  video: "text-green-500 bg-green-500/10",
 };
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
-  const [animateNew, setAnimateNew] = useState(false);
+  const { 
+    notifications, 
+    loading, 
+    unreadCount, 
+    markAllAsRead, 
+    handleNotificationClick 
+  } = useNotifications();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  // Simulate new notification
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() > 0.7 && notifications.length < 10) {
-        setAnimateNew(true);
-        setTimeout(() => setAnimateNew(false), 500);
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [notifications]);
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const clearNotification = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleClick = (notification: typeof notifications[0]) => {
+    handleNotificationClick(notification);
+    setIsOpen(false);
   };
 
   return (
@@ -105,15 +43,10 @@ export function NotificationBell() {
           isOpen && "bg-secondary"
         )}
       >
-        <Bell
-          className={cn(
-            "w-5 h-5 text-foreground transition-transform",
-            animateNew && "animate-bounce-subtle"
-          )}
-        />
+        <Bell className="w-5 h-5 text-foreground" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full bg-coral text-white text-xs font-semibold animate-scale-in">
-            {unreadCount}
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full bg-destructive text-destructive-foreground text-xs font-semibold animate-scale-in">
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
@@ -143,29 +76,35 @@ export function NotificationBell() {
 
             {/* Notifications List */}
             <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
+              {loading ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-6 h-6 mx-auto animate-spin text-muted-foreground" />
+                </div>
+              ) : notifications.length === 0 ? (
                 <div className="py-12 text-center">
                   <Bell className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
                   <p className="text-muted-foreground">No notifications yet</p>
                 </div>
               ) : (
                 notifications.map((notification) => {
-                  const Icon = typeIcons[notification.type];
+                  const Icon = typeIcons[notification.type] || Bell;
+                  const colorClass = typeColors[notification.type] || "text-foreground bg-secondary";
+                  
                   return (
                     <div
                       key={notification.id}
-                      onClick={() => markAsRead(notification.id)}
+                      onClick={() => handleClick(notification)}
                       className={cn(
                         "group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors",
                         "hover:bg-secondary/50",
-                        !notification.read && "bg-mint/5"
+                        !notification.is_read && "bg-primary/5"
                       )}
                     >
                       {/* Icon */}
                       <div
                         className={cn(
                           "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center",
-                          typeColors[notification.type]
+                          colorClass
                         )}
                       >
                         <Icon className="w-5 h-5" />
@@ -176,31 +115,23 @@ export function NotificationBell() {
                         <p
                           className={cn(
                             "text-sm",
-                            !notification.read ? "font-semibold" : "font-medium"
+                            !notification.is_read ? "font-semibold" : "font-medium"
                           )}
                         >
                           {notification.title}
                         </p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {notification.description}
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {notification.message}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {notification.time}
+                          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                         </p>
                       </div>
 
                       {/* Unread indicator */}
-                      {!notification.read && (
-                        <span className="w-2 h-2 rounded-full bg-mint flex-shrink-0 mt-2" />
+                      {!notification.is_read && (
+                        <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
                       )}
-
-                      {/* Close button */}
-                      <button
-                        onClick={(e) => clearNotification(notification.id, e)}
-                        className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-secondary transition-all"
-                      >
-                        <X className="w-4 h-4 text-muted-foreground" />
-                      </button>
                     </div>
                   );
                 })
@@ -210,8 +141,12 @@ export function NotificationBell() {
             {/* Footer */}
             {notifications.length > 0 && (
               <div className="px-4 py-3 border-t border-border">
-                <Button variant="ghost" className="w-full text-muted-foreground">
-                  View all notifications
+                <Button 
+                  variant="ghost" 
+                  className="w-full text-muted-foreground"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Close
                 </Button>
               </div>
             )}
