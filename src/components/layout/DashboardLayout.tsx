@@ -22,7 +22,9 @@ import {
   X,
   Rocket,
   User,
-  Loader2
+  Loader2,
+  Building2,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,6 +41,8 @@ const navItems: NavItem[] = [
   { icon: Heart, label: 'Match', path: '/dashboard/match' },
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
   { icon: Calendar, label: 'Bookings', path: '/dashboard/bookings' },
+  { icon: Building2, label: 'Startups', path: '/dashboard/startups' },
+  { icon: TrendingUp, label: 'Investors', path: '/dashboard/investors' },
 ];
 
 const DashboardLayout = () => {
@@ -57,16 +61,23 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     if (user) {
-      // Fetch profile
+      // Fetch profile and check onboarding
       const fetchProfile = async () => {
         const { data } = await supabase
           .from('profiles')
-          .select('full_name, avatar_url')
+          .select('full_name, avatar_url, onboarding_completed')
           .eq('user_id', user.id)
           .single();
         
         if (data) {
           setProfile(data);
+          // Redirect to onboarding if not completed
+          if (!data.onboarding_completed) {
+            navigate('/onboarding');
+          }
+        } else {
+          // No profile means new user, redirect to onboarding
+          navigate('/onboarding');
         }
       };
 
