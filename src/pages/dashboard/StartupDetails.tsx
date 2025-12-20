@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { 
   Loader2, 
   Rocket, 
   Users, 
   TrendingUp,
-  ExternalLink,
   ArrowLeft,
   Edit,
   Video,
@@ -21,10 +25,22 @@ import {
   UserPlus,
   UserCheck,
   Globe,
-  Building2
+  Building2,
+  Calendar,
+  DollarSign,
+  Target,
+  Briefcase,
+  Camera,
+  Save,
+  X,
+  MapPin,
+  Linkedin,
+  ExternalLink
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/hooks/use-toast';
+import { formatDistanceToNow, format } from 'date-fns';
+import { AvatarCropper } from '@/components/common/AvatarCropper';
 
 interface Startup {
   id: string;
@@ -64,19 +80,30 @@ interface VideoPitch {
 }
 
 const stages = [
-  { value: 'idea', label: 'Idea Stage' },
-  { value: 'mvp', label: 'MVP' },
-  { value: 'early', label: 'Early Traction' },
-  { value: 'growth', label: 'Growth' },
-  { value: 'scaling', label: 'Scaling' }
+  { value: 'idea', label: 'Idea Stage', description: 'Concept phase, validating the idea' },
+  { value: 'mvp', label: 'MVP', description: 'Minimum viable product built' },
+  { value: 'early', label: 'Early Traction', description: 'First customers acquired' },
+  { value: 'growth', label: 'Growth', description: 'Scaling operations' },
+  { value: 'scaling', label: 'Scaling', description: 'Rapid expansion phase' }
+];
+
+const industries = [
+  'Technology', 'Healthcare', 'Fintech', 'E-commerce', 'Education', 
+  'SaaS', 'AI/ML', 'Sustainability', 'Consumer', 'B2B', 'Media', 'Other'
+];
+
+const lookingForOptions = [
+  'Investment', 'Co-Founder', 'Mentorship', 'Employees', 'Advisors', 'Partnerships'
 ];
 
 const StartupDetails = () => {
   const { startupId } = useParams<{ startupId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [startup, setStartup] = useState<Startup | null>(null);
-  const [founder, setFounder] = useState<{ full_name: string; avatar_url: string | null; user_id: string } | null>(null);
+  const [founder, setFounder] = useState<{ full_name: string; avatar_url: string | null; user_id: string; title: string | null; linkedin_url: string | null } | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
   const [followersCount, setFollowersCount] = useState(0);
@@ -84,6 +111,27 @@ const StartupDetails = () => {
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  
+  // Edit mode
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    tagline: '',
+    description: '',
+    website: '',
+    industry: '',
+    stage: '',
+    funding_goal: '',
+    funding_raised: '',
+    team_size: '',
+    looking_for: [] as string[]
+  });
+  
+  // Logo upload
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const isOwner = user?.id === startup?.founder_id;
 
@@ -96,7 +144,6 @@ const StartupDetails = () => {
   const fetchStartupData = async () => {
     setLoading(true);
     try {
-      // Fetch startup
       const { data: startupData, error } = await supabase
         .from('startups')
         .select('*')
@@ -110,11 +157,23 @@ const StartupDetails = () => {
       }
 
       setStartup(startupData);
+      setEditForm({
+        name: startupData.name || '',
+        tagline: startupData.tagline || '',
+        description: startupData.description || '',
+        website: startupData.website || '',
+        industry: startupData.industry || '',
+        stage: startupData.stage || '',
+        funding_goal: startupData.funding_goal?.toString() || '',
+        funding_raised: startupData.funding_raised?.toString() || '',
+        team_size: startupData.team_size?.toString() || '1',
+        looking_for: startupData.looking_for || []
+      });
 
       // Fetch founder profile
       const { data: founderData } = await supabase
         .from('profiles')
-        .select('full_name, avatar_url, user_id')
+        .select('full_name, avatar_url, user_id, title, linkedin_url')
         .eq('user_id', startupData.founder_id)
         .single();
 
@@ -215,13 +274,110 @@ const StartupDetails = () => {
     setFollowLoading(false);
   };
 
+  const handleSave = async () => {
+    if (!startup) return;
+    setSaving(true);
+
+    const { error } = await supabase
+      .from('startups')
+      .update({
+        name: editForm.name,
+        tagline: editForm.tagline || null,
+        description: editForm.description || null,
+        website: editForm.website || null,
+        industry: editForm.industry || null,
+        stage: editForm.stage || null,
+        funding_goal: editForm.funding_goal ? parseFloat(editForm.funding_goal) : null,
+        funding_raised: editForm.funding_raised ? parseFloat(editForm.funding_raised) : null,
+        team_size: parseInt(editForm.team_size) || 1,
+        looking_for: editForm.looking_for.length > 0 ? editForm.looking_for : null
+      })
+      .eq('id', startup.id);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update startup', variant: 'destructive' });
+    } else {
+      toast({ title: 'Saved!', description: 'Startup details updated.' });
+      setIsEditing(false);
+      fetchStartupData();
+    }
+
+    setSaving(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please select an image file', variant: 'destructive' });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Please select an image under 10MB', variant: 'destructive' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!startup) return;
+
+    setUploadingLogo(true);
+    setCropperOpen(false);
+
+    try {
+      const fileName = `${startup.id}/${Date.now()}.jpg`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('startup-logos')
+        .upload(fileName, croppedBlob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('startup-logos')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('startups')
+        .update({ logo_url: publicUrl })
+        .eq('id', startup.id);
+
+      if (updateError) throw updateError;
+
+      setStartup(prev => prev ? { ...prev, logo_url: publicUrl } : null);
+      toast({ title: 'Logo updated!', description: 'Startup logo has been changed.' });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({ title: 'Upload failed', description: 'Failed to upload logo. Please try again.', variant: 'destructive' });
+    } finally {
+      setUploadingLogo(false);
+      setSelectedImage(null);
+    }
+  };
+
   const handlePitchClick = (pitchId: string) => {
     navigate(`/dashboard/pitches?video=${pitchId}`);
   };
 
   const getStageColor = (stage: string | null) => {
     switch (stage) {
-      case 'idea': return 'bg-muted';
+      case 'idea': return 'bg-muted text-muted-foreground';
       case 'mvp': return 'bg-sky/20 text-sky';
       case 'early': return 'bg-mint/20 text-mint';
       case 'growth': return 'bg-pink/20 text-pink';
@@ -229,6 +385,10 @@ const StartupDetails = () => {
       default: return 'bg-muted';
     }
   };
+
+  const fundingProgress = startup?.funding_goal 
+    ? Math.min(((startup.funding_raised || 0) / startup.funding_goal) * 100, 100)
+    : 0;
 
   if (loading) {
     return (
@@ -269,21 +429,46 @@ const StartupDetails = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        {/* Startup Header */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
+        {/* Hero Header - Crunchbase Style */}
+        <Card className="mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-primary/10 via-sky/10 to-primary/5 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-sky/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                {startup.logo_url ? (
-                  <img src={startup.logo_url} alt={startup.name} className="w-full h-full object-cover rounded-2xl" />
-                ) : (
-                  <Rocket className="h-10 w-10 text-primary" />
+              {/* Logo with upload option for owner */}
+              <div className="relative group">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 bg-background rounded-2xl shadow-lg flex items-center justify-center overflow-hidden border-4 border-background">
+                  {startup.logo_url ? (
+                    <img src={startup.logo_url} alt={startup.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Rocket className="h-12 w-12 text-primary" />
+                  )}
+                </div>
+                
+                {isOwner && (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    {uploadingLogo ? (
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="h-6 w-6 text-white" />
+                    )}
+                  </button>
                 )}
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
               </div>
 
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                  <h1 className="text-2xl font-bold">{startup.name}</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold">{startup.name}</h1>
                   {startup.stage && (
                     <Badge className={getStageColor(startup.stage)}>
                       {stages.find(s => s.value === startup.stage)?.label || startup.stage}
@@ -292,41 +477,27 @@ const StartupDetails = () => {
                 </div>
 
                 {startup.tagline && (
-                  <p className="text-muted-foreground mb-3">{startup.tagline}</p>
+                  <p className="text-lg text-muted-foreground mb-3">{startup.tagline}</p>
                 )}
 
-                {startup.industry && (
-                  <Badge variant="outline" className="mb-3">{startup.industry}</Badge>
-                )}
-
-                {startup.description && (
-                  <p className="text-sm text-muted-foreground mb-4 max-w-lg">
-                    {startup.description}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4 justify-center sm:justify-start">
-                  <span className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    {startup.team_size} member{startup.team_size !== 1 ? 's' : ''}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <UserPlus className="h-4 w-4" />
-                    {followersCount} follower{followersCount !== 1 ? 's' : ''}
-                  </span>
-                  {startup.funding_goal && (
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="h-4 w-4" />
-                      Goal: ${startup.funding_goal.toLocaleString()}
-                    </span>
+                <div className="flex flex-wrap gap-2 mb-4 justify-center sm:justify-start">
+                  {startup.industry && (
+                    <Badge variant="outline" className="gap-1">
+                      <Briefcase className="h-3 w-3" />
+                      {startup.industry}
+                    </Badge>
                   )}
+                  <Badge variant="outline" className="gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Founded {format(new Date(startup.created_at), 'MMM yyyy')}
+                  </Badge>
                 </div>
 
                 <div className="flex gap-2 justify-center sm:justify-start flex-wrap">
                   {isOwner ? (
-                    <Button onClick={() => navigate('/dashboard/startups')}>
+                    <Button onClick={() => setIsEditing(!isEditing)}>
                       <Edit className="h-4 w-4 mr-2" />
-                      Manage Startup
+                      {isEditing ? 'Cancel Edit' : 'Edit Details'}
                     </Button>
                   ) : (
                     <Button 
@@ -356,26 +527,261 @@ const StartupDetails = () => {
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
+
+          {/* Quick Stats Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-border border-t">
+            <div className="p-4 text-center">
+              <p className="text-2xl font-bold">{startup.team_size}</p>
+              <p className="text-xs text-muted-foreground">Team Size</p>
+            </div>
+            <div className="p-4 text-center">
+              <p className="text-2xl font-bold">{followersCount}</p>
+              <p className="text-xs text-muted-foreground">Followers</p>
+            </div>
+            <div className="p-4 text-center">
+              <p className="text-2xl font-bold">{pitches.length}</p>
+              <p className="text-xs text-muted-foreground">Pitches</p>
+            </div>
+            <div className="p-4 text-center">
+              <p className="text-2xl font-bold">
+                {pitches.reduce((sum, p) => sum + (p.views_count || 0), 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">Total Views</p>
+            </div>
+          </div>
         </Card>
+
+        {/* Edit Form */}
+        {isEditing && isOwner && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Edit Startup Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Startup Name</Label>
+                  <Input 
+                    value={editForm.name}
+                    onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Startup name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Industry</Label>
+                  <select 
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={editForm.industry}
+                    onChange={(e) => setEditForm(f => ({ ...f, industry: e.target.value }))}
+                  >
+                    <option value="">Select industry</option>
+                    {industries.map(i => (
+                      <option key={i} value={i}>{i}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tagline</Label>
+                <Input 
+                  value={editForm.tagline}
+                  onChange={(e) => setEditForm(f => ({ ...f, tagline: e.target.value }))}
+                  placeholder="A catchy one-liner about your startup"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea 
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Tell investors about your startup, the problem you solve, and your vision..."
+                  className="min-h-[120px]"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Website</Label>
+                  <Input 
+                    value={editForm.website}
+                    onChange={(e) => setEditForm(f => ({ ...f, website: e.target.value }))}
+                    placeholder="https://yourwebsite.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stage</Label>
+                  <select 
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={editForm.stage}
+                    onChange={(e) => setEditForm(f => ({ ...f, stage: e.target.value }))}
+                  >
+                    <option value="">Select stage</option>
+                    {stages.map(s => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Funding Goal ($)</Label>
+                  <Input 
+                    type="number"
+                    value={editForm.funding_goal}
+                    onChange={(e) => setEditForm(f => ({ ...f, funding_goal: e.target.value }))}
+                    placeholder="1000000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Funding Raised ($)</Label>
+                  <Input 
+                    type="number"
+                    value={editForm.funding_raised}
+                    onChange={(e) => setEditForm(f => ({ ...f, funding_raised: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Team Size</Label>
+                  <Input 
+                    type="number"
+                    value={editForm.team_size}
+                    onChange={(e) => setEditForm(f => ({ ...f, team_size: e.target.value }))}
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Looking For</Label>
+                <div className="flex flex-wrap gap-2">
+                  {lookingForOptions.map(opt => (
+                    <Badge 
+                      key={opt}
+                      variant={editForm.looking_for.includes(opt) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setEditForm(f => ({
+                          ...f,
+                          looking_for: f.looking_for.includes(opt)
+                            ? f.looking_for.filter(x => x !== opt)
+                            : [...f.looking_for, opt]
+                        }));
+                      }}
+                    >
+                      {opt}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* About Section */}
+        {startup.description && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">About</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground whitespace-pre-wrap">{startup.description}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Funding Progress */}
+        {startup.funding_goal && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Funding
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span>Raised: <strong>${(startup.funding_raised || 0).toLocaleString()}</strong></span>
+                  <span>Goal: <strong>${startup.funding_goal.toLocaleString()}</strong></span>
+                </div>
+                <Progress value={fundingProgress} className="h-3" />
+                <p className="text-xs text-muted-foreground text-center">
+                  {fundingProgress.toFixed(1)}% of funding goal reached
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Looking For */}
+        {startup.looking_for && startup.looking_for.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Looking For
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {startup.looking_for.map((item) => (
+                  <Badge key={item} variant="secondary" className="px-3 py-1">
+                    {item}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Founder Card */}
         {founder && (
           <Card className="mb-6">
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground mb-3">Founded by</p>
+            <CardHeader>
+              <CardTitle className="text-lg">Founder</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div 
-                className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-4 cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-2 rounded-lg transition-colors"
                 onClick={() => navigate(`/dashboard/profile/${founder.user_id}`)}
               >
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-14 w-14 border-2 border-primary/20">
                   <AvatarImage src={founder.avatar_url || ''} />
-                  <AvatarFallback>{founder.full_name?.charAt(0) || 'F'}</AvatarFallback>
+                  <AvatarFallback className="text-lg">{founder.full_name?.charAt(0) || 'F'}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="font-medium">{founder.full_name}</p>
-                  <p className="text-sm text-muted-foreground">Founder</p>
+                <div className="flex-1">
+                  <p className="font-semibold text-lg">{founder.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{founder.title || 'Founder & CEO'}</p>
                 </div>
+                {founder.linkedin_url && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(founder.linkedin_url!, '_blank');
+                    }}
+                  >
+                    <Linkedin className="h-5 w-5" />
+                  </Button>
+                )}
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -403,6 +809,12 @@ const StartupDetails = () => {
                   <p className="text-sm text-muted-foreground">
                     This startup hasn't uploaded any pitches yet.
                   </p>
+                  {isOwner && (
+                    <Button className="mt-4" onClick={() => navigate('/dashboard/upload-pitch')}>
+                      <Video className="h-4 w-4 mr-2" />
+                      Upload First Pitch
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ) : (
@@ -460,17 +872,17 @@ const StartupDetails = () => {
                   className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => navigate(`/dashboard/profile/${founder.user_id}`)}
                 >
-                  <CardContent className="py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                  <CardContent className="py-4">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
                         <AvatarImage src={founder.avatar_url || ''} />
                         <AvatarFallback>{founder.full_name?.charAt(0) || 'F'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="font-medium">{founder.full_name}</p>
-                        <p className="text-sm text-muted-foreground">Founder</p>
+                        <p className="font-semibold">{founder.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{founder.title || 'Founder'}</p>
                       </div>
-                      <Badge variant="secondary">Founder</Badge>
+                      <Badge>Founder</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -483,24 +895,44 @@ const StartupDetails = () => {
                   className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => navigate(`/dashboard/profile/${member.user_id}`)}
                 >
-                  <CardContent className="py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                  <CardContent className="py-4">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
                         <AvatarImage src={member.profile?.avatar_url || ''} />
                         <AvatarFallback>{member.profile?.full_name?.charAt(0) || 'T'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="font-medium">{member.profile?.full_name || 'Team Member'}</p>
+                        <p className="font-semibold">{member.profile?.full_name || 'Team Member'}</p>
                         <p className="text-sm text-muted-foreground">{member.role}</p>
                       </div>
+                      <Badge variant="secondary">{member.role}</Badge>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+
+              {teamMembers.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  No additional team members yet.
+                </p>
+              )}
             </div>
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {/* Logo Cropper Dialog */}
+      {selectedImage && (
+        <AvatarCropper
+          open={cropperOpen}
+          onClose={() => {
+            setCropperOpen(false);
+            setSelectedImage(null);
+          }}
+          imageSrc={selectedImage}
+          onCropComplete={handleCropComplete}
+        />
+      )}
     </div>
   );
 };
