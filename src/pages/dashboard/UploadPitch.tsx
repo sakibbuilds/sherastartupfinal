@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,8 @@ import {
   X,
   Video,
   Image,
-  ArrowLeft
+  ArrowLeft,
+  Rocket
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -33,23 +34,68 @@ const motives = [
   { value: 'general', label: 'General Pitch' },
 ];
 
+interface Startup {
+  id: string;
+  name: string;
+  logo_url: string | null;
+}
+
 const UploadPitch = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [userStartups, setUserStartups] = useState<Startup[]>([]);
+  const [loadingStartups, setLoadingStartups] = useState(true);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
+  // Get startup_id from URL params if navigating from startup page
+  const preselectedStartupId = searchParams.get('startup');
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     motive: '',
+    startup_id: preselectedStartupId || '',
     video: null as File | null,
     thumbnail: null as File | null,
   });
 
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+
+  // Fetch user's startups
+  useEffect(() => {
+    const fetchUserStartups = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('startups')
+          .select('id, name, logo_url')
+          .eq('founder_id', user.id)
+          .order('name');
+
+        if (error) throw error;
+        setUserStartups(data || []);
+        
+        // If preselected startup exists, verify it belongs to user
+        if (preselectedStartupId && data) {
+          const found = data.find(s => s.id === preselectedStartupId);
+          if (!found) {
+            setFormData(prev => ({ ...prev, startup_id: '' }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching startups:', error);
+      } finally {
+        setLoadingStartups(false);
+      }
+    };
+
+    fetchUserStartups();
+  }, [user, preselectedStartupId]);
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,7 +156,7 @@ const UploadPitch = () => {
         }
       }
 
-      // Insert pitch record
+      // Insert pitch record with startup_id if selected
       const { error: insertError } = await supabase
         .from('video_pitches')
         .insert({
@@ -119,13 +165,20 @@ const UploadPitch = () => {
           description: formData.description || null,
           motive: formData.motive,
           video_url: videoUrl,
-          thumbnail_url: thumbnailUrl
+          thumbnail_url: thumbnailUrl,
+          startup_id: formData.startup_id || null
         });
 
       if (insertError) throw insertError;
 
       toast({ title: 'Success!', description: 'Your pitch video has been uploaded.' });
-      navigate('/dashboard/pitches/my');
+      
+      // Navigate back to startup page if came from there, otherwise go to my pitches
+      if (formData.startup_id) {
+        navigate(`/dashboard/startups/${formData.startup_id}`);
+      } else {
+        navigate('/dashboard/pitches/my');
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast({ title: 'Error', description: 'Failed to upload video', variant: 'destructive' });
@@ -181,6 +234,39 @@ const UploadPitch = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Startup Selection */}
+          {!loadingStartups && userStartups.length > 0 && (
+            <div className="space-y-2">
+              <Label>Associate with Startup</Label>
+              <Select
+                value={formData.startup_id}
+                onValueChange={(v) => setFormData({ ...formData, startup_id: v === 'none' ? '' : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a startup (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No startup</SelectItem>
+                  {userStartups.map((startup) => (
+                    <SelectItem key={startup.id} value={startup.id}>
+                      <div className="flex items-center gap-2">
+                        {startup.logo_url ? (
+                          <img src={startup.logo_url} alt="" className="h-4 w-4 rounded object-cover" />
+                        ) : (
+                          <Rocket className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        {startup.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Linking to a startup will show this pitch on the startup's page
+              </p>
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-2">
