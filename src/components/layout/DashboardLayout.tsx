@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { 
   Home, 
   MessageSquare, 
@@ -107,9 +106,9 @@ const DashboardLayout = () => {
       };
 
       const fetchNotifications = async () => {
-        const { data, count } = await supabase
+        const { data } = await supabase
           .from('notifications')
-          .select('*', { count: 'exact' })
+          .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(10);
@@ -121,7 +120,6 @@ const DashboardLayout = () => {
       };
 
       const fetchRecentMessages = async () => {
-        // Get conversations user is part of
         const { data: participantData } = await supabase
           .from('conversation_participants')
           .select('conversation_id')
@@ -140,7 +138,6 @@ const DashboardLayout = () => {
             .limit(5);
 
           if (messagesData) {
-            // Fetch sender profiles
             const messagesWithSenders = await Promise.all(
               messagesData.map(async (msg) => {
                 const { data: sender } = await supabase
@@ -225,40 +222,73 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Desktop Header */}
-      <header className="hidden lg:flex items-center justify-between h-16 px-6 border-b border-border bg-card fixed top-0 left-0 right-0 z-50">
-        {/* Logo */}
+    <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-border bg-card">
         <div 
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-2 px-6 py-4 border-b border-border cursor-pointer"
           onClick={() => navigate('/dashboard')}
         >
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
             <Rocket className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">CampusLaunch</span>
+          <span className="text-lg font-bold">CampusLaunch</span>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex-1 px-4 py-6 space-y-2">
           {navItems.map((item) => (
             <Button
               key={item.path}
               variant={location.pathname === item.path ? 'default' : 'ghost'}
-              size="sm"
               className={cn(
-                'gap-2',
+                'w-full justify-start gap-3',
                 location.pathname === item.path && 'bg-primary text-primary-foreground'
               )}
               onClick={() => navigate(item.path)}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className="h-5 w-5" />
               {item.label}
             </Button>
           ))}
         </nav>
 
-        {/* Right side - Notifications, Messages, Profile */}
+        <div className="p-4 border-t border-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.avatar_url || ''} />
+                  <AvatarFallback>{profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-start text-left">
+                  <span className="truncate text-sm font-medium">{profile?.full_name || 'User'}</span>
+                  {profile?.title && (
+                    <span className="text-xs text-muted-foreground truncate">{profile.title}</span>
+                  )}
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-popover">
+              <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </aside>
+
+      {/* Desktop Header (right of sidebar) */}
+      <header className="hidden lg:flex items-center justify-end h-16 px-6 border-b border-border bg-card fixed top-0 left-64 right-0 z-40">
         <div className="flex items-center gap-2">
           {/* Notifications */}
           <DropdownMenu>
@@ -392,16 +422,9 @@ const DashboardLayout = () => {
                   <AvatarImage src={profile?.avatar_url || ''} />
                   <AvatarFallback>{profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
-                <div className="hidden xl:flex flex-col items-start">
-                  <span className="text-sm font-medium truncate max-w-[120px]">
-                    {profile?.full_name || 'User'}
-                  </span>
-                  {profile?.title && (
-                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                      {profile.title}
-                    </span>
-                  )}
-                </div>
+                <span className="text-sm font-medium truncate max-w-[120px]">
+                  {profile?.full_name || 'User'}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover">
@@ -558,8 +581,10 @@ const DashboardLayout = () => {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 pt-16">
-        <Outlet />
+      <main className="flex-1 lg:ml-64">
+        <div className="pt-16 lg:pt-16">
+          <Outlet />
+        </div>
       </main>
 
       {/* Mobile Bottom Navigation */}
