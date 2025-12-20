@@ -17,7 +17,10 @@ import {
   Play,
   Send,
   Flag,
-  Eye
+  Eye,
+  Search,
+  Filter,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -28,6 +31,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 import CommentTree, { Comment } from '@/components/pitches/CommentTree';
 import ReportPitchDialog from '@/components/pitches/ReportPitchDialog';
 
@@ -62,6 +73,15 @@ const motiveLabels: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
+const motiveOptions = [
+  { value: 'investment', label: 'Raising Investment' },
+  { value: 'mentorship', label: 'Seeking Mentorship' },
+  { value: 'cofounder', label: 'Looking for Co-Founder' },
+  { value: 'investor', label: 'Investor' },
+  { value: 'networking', label: 'Networking' },
+  { value: 'general', label: 'General' },
+];
+
 // Format count as 1K, 2.5K, 1M etc
 const formatCount = (count: number): string => {
   if (count >= 1000000) {
@@ -77,6 +97,7 @@ const Pitches = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
+  const [filteredPitches, setFilteredPitches] = useState<VideoPitch[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -89,6 +110,11 @@ const Pitches = () => {
   const [page, setPage] = useState(0);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportingPitch, setReportingPitch] = useState<VideoPitch | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMotives, setSelectedMotives] = useState<string[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
 
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const containerRef = useRef<HTMLDivElement>(null);
@@ -143,12 +169,35 @@ const Pitches = () => {
     setLoading(false);
   }, [user]);
 
+  // Apply filters
+  useEffect(() => {
+    let result = [...pitches];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.title.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query)) ||
+        (p.user?.full_name && p.user.full_name.toLowerCase().includes(query))
+      );
+    }
+
+    // Filter by motives
+    if (selectedMotives.length > 0) {
+      result = result.filter(p => p.motive && selectedMotives.includes(p.motive));
+    }
+
+    setFilteredPitches(result);
+    setCurrentIndex(0);
+  }, [pitches, searchQuery, selectedMotives]);
+
   // Initial fetch
   useEffect(() => {
     fetchPitches(0);
   }, [fetchPitches]);
 
-  // Realtime subscriptions for counts - only update counts from realtime, not local state
+  // Realtime subscriptions for counts
   useEffect(() => {
     const channel = supabase
       .channel('pitch-realtime')
@@ -173,7 +222,7 @@ const Pitches = () => {
 
   // Track view using edge function (IP-based, 24h cooldown)
   useEffect(() => {
-    const currentPitch = pitches[currentIndex];
+    const currentPitch = filteredPitches[currentIndex];
     if (!currentPitch || viewTrackedRef.current.has(currentPitch.id)) return;
 
     const timer = setTimeout(async () => {
@@ -186,15 +235,15 @@ const Pitches = () => {
       } catch (error) {
         console.error('Error tracking view:', error);
       }
-    }, 3000); // Track view after 3 seconds
+    }, 3000);
 
     return () => clearTimeout(timer);
-  }, [currentIndex, pitches]);
+  }, [currentIndex, filteredPitches]);
 
   useEffect(() => {
     Object.entries(videoRefs.current).forEach(([id, video]) => {
       if (video) {
-        const pitch = pitches[currentIndex];
+        const pitch = filteredPitches[currentIndex];
         if (pitch && pitch.id === id) {
           if (playing) {
             video.play().catch(() => {});
@@ -207,7 +256,7 @@ const Pitches = () => {
         }
       }
     });
-  }, [currentIndex, playing, pitches]);
+  }, [currentIndex, playing, filteredPitches]);
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -217,24 +266,23 @@ const Pitches = () => {
     const itemHeight = container.clientHeight;
     const newIndex = Math.round(scrollTop / itemHeight);
 
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < pitches.length) {
+    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < filteredPitches.length) {
       setCurrentIndex(newIndex);
       setPlaying(true);
     }
 
-    if (scrollTop + itemHeight * 2 >= container.scrollHeight && hasMore && !loading) {
+    if (scrollTop + itemHeight * 2 >= container.scrollHeight && hasMore && !loading && !searchQuery && selectedMotives.length === 0) {
       setPage(prev => {
         const newPage = prev + 1;
         fetchPitches(newPage, true);
         return newPage;
       });
     }
-  }, [currentIndex, pitches.length, hasMore, loading, fetchPitches]);
+  }, [currentIndex, filteredPitches.length, hasMore, loading, fetchPitches, searchQuery, selectedMotives]);
 
   const handleLike = async (pitch: VideoPitch) => {
     if (!user) return;
 
-    // Optimistic update for isLiked status only
     const wasLiked = pitch.isLiked;
     setPitches(prev => prev.map(p => 
       p.id === pitch.id 
@@ -250,7 +298,6 @@ const Pitches = () => {
         .eq('user_id', user.id);
       
       if (error) {
-        // Revert on error
         setPitches(prev => prev.map(p => 
           p.id === pitch.id ? { ...p, isLiked: wasLiked } : p
         ));
@@ -261,7 +308,6 @@ const Pitches = () => {
         .insert({ video_id: pitch.id, user_id: user.id });
       
       if (error) {
-        // Revert on error
         setPitches(prev => prev.map(p => 
           p.id === pitch.id ? { ...p, isLiked: wasLiked } : p
         ));
@@ -299,19 +345,19 @@ const Pitches = () => {
   };
 
   const handleAddComment = async () => {
-    if (!user || !newComment.trim() || !pitches[currentIndex]) return;
+    if (!user || !newComment.trim() || !filteredPitches[currentIndex]) return;
 
     const { error } = await supabase
       .from('video_pitch_comments')
       .insert({
-        video_id: pitches[currentIndex].id,
+        video_id: filteredPitches[currentIndex].id,
         user_id: user.id,
         content: newComment.trim()
       });
 
     if (!error) {
       setNewComment('');
-      fetchComments(pitches[currentIndex].id);
+      fetchComments(filteredPitches[currentIndex].id);
     }
   };
 
@@ -337,6 +383,21 @@ const Pitches = () => {
     navigate(`/dashboard/profile/${userId}`);
   };
 
+  const toggleMotive = (motive: string) => {
+    setSelectedMotives(prev => 
+      prev.includes(motive) 
+        ? prev.filter(m => m !== motive)
+        : [...prev, motive]
+    );
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedMotives([]);
+  };
+
+  const activeFiltersCount = selectedMotives.length + (searchQuery ? 1 : 0);
+
   if (loading && pitches.length === 0) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
@@ -347,6 +408,116 @@ const Pitches = () => {
 
   return (
     <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] relative bg-black">
+      {/* Search and Filter Bar */}
+      <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+        <AnimatePresence>
+          {showSearch ? (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 'auto', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="flex items-center gap-2"
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search pitches..."
+                  className="pl-9 w-48 md:w-64 bg-black/70 border-white/20 text-white placeholder:text-white/50"
+                  autoFocus
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <X className="h-4 w-4 text-white/50 hover:text-white" />
+                  </button>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+                onClick={() => setShowSearch(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </motion.div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="bg-black/50 text-white hover:bg-black/70"
+              onClick={() => setShowSearch(true)}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          )}
+        </AnimatePresence>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="bg-black/50 text-white hover:bg-black/70 relative"
+            >
+              <Filter className="h-5 w-5" />
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuLabel>Filter by Motive</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {motiveOptions.map((option) => (
+              <DropdownMenuCheckboxItem
+                key={option.value}
+                checked={selectedMotives.includes(option.value)}
+                onCheckedChange={() => toggleMotive(option.value)}
+              >
+                {option.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+            {activeFiltersCount > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-destructive hover:text-destructive"
+                  onClick={clearFilters}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear all filters
+                </Button>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Active filter badges */}
+        {selectedMotives.length > 0 && !showSearch && (
+          <div className="hidden md:flex items-center gap-1 flex-wrap">
+            {selectedMotives.map((motive) => (
+              <Badge
+                key={motive}
+                className={cn("cursor-pointer", motiveLabels[motive]?.color)}
+                onClick={() => toggleMotive(motive)}
+              >
+                {motiveLabels[motive]?.label}
+                <X className="h-3 w-3 ml-1" />
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Video Feed */}
       <div
         ref={containerRef}
@@ -354,14 +525,29 @@ const Pitches = () => {
         onScroll={handleScroll}
         style={{ scrollSnapType: 'y mandatory' }}
       >
-        {pitches.length === 0 ? (
+        {filteredPitches.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-white">
             <Play className="h-16 w-16 mb-4 opacity-50" />
-            <p className="text-lg font-medium">No pitches yet</p>
-            <p className="text-muted-foreground">Be the first to upload a pitch!</p>
+            <p className="text-lg font-medium">
+              {searchQuery || selectedMotives.length > 0 ? 'No pitches found' : 'No pitches yet'}
+            </p>
+            <p className="text-muted-foreground">
+              {searchQuery || selectedMotives.length > 0 
+                ? 'Try adjusting your search or filters' 
+                : 'Be the first to upload a pitch!'}
+            </p>
+            {(searchQuery || selectedMotives.length > 0) && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={clearFilters}
+              >
+                Clear filters
+              </Button>
+            )}
           </div>
         ) : (
-          pitches.map((pitch, index) => (
+          filteredPitches.map((pitch, index) => (
             <div
               key={pitch.id}
               className="h-full w-full snap-start snap-always relative flex items-center justify-center"
@@ -495,7 +681,7 @@ const Pitches = () => {
         )}
 
         {/* Loading More Indicator */}
-        {hasMore && pitches.length > 0 && (
+        {hasMore && filteredPitches.length > 0 && !searchQuery && selectedMotives.length === 0 && (
           <div className="h-20 flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-white" />
           </div>
@@ -506,7 +692,7 @@ const Pitches = () => {
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
         <SheetContent side="bottom" className="h-[70vh] rounded-t-xl">
           <SheetHeader>
-            <SheetTitle>Comments ({formatCount(pitches[currentIndex]?.comments_count || 0)})</SheetTitle>
+            <SheetTitle>Comments ({formatCount(filteredPitches[currentIndex]?.comments_count || 0)})</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col h-[calc(100%-4rem)]">
             <ScrollArea className="flex-1 py-4">
@@ -517,9 +703,9 @@ const Pitches = () => {
               ) : (
                 <CommentTree 
                   comments={comments} 
-                  videoId={pitches[currentIndex]?.id || ''} 
+                  videoId={filteredPitches[currentIndex]?.id || ''} 
                   onCommentAdded={() => {
-                    fetchComments(pitches[currentIndex]?.id);
+                    fetchComments(filteredPitches[currentIndex]?.id);
                   }}
                 />
               )}
