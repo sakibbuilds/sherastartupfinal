@@ -524,7 +524,7 @@ const StartupDetails = () => {
                       </Button>
                       <Button 
                         variant="outline"
-                        onClick={() => navigate('/dashboard/upload-pitch')}
+                        onClick={() => navigate('/dashboard/pitches/upload')}
                       >
                         <Upload className="h-4 w-4 mr-2" />
                         Upload Pitch
@@ -912,7 +912,7 @@ const StartupDetails = () => {
                     {isOwner ? "Upload your first pitch to showcase your startup!" : "This startup hasn't uploaded any pitches yet."}
                   </p>
                   {isOwner && (
-                    <Button onClick={() => navigate('/dashboard/upload-pitch')}>
+                    <Button onClick={() => navigate('/dashboard/pitches/upload')}>
                       <Upload className="h-4 w-4 mr-2" />
                       Upload First Pitch
                     </Button>
@@ -967,7 +967,7 @@ const StartupDetails = () => {
                 {isOwner && (
                   <motion.div
                     className="cursor-pointer group"
-                    onClick={() => navigate('/dashboard/upload-pitch')}
+                    onClick={() => navigate('/dashboard/pitches/upload')}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
