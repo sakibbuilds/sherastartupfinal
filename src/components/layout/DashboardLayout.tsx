@@ -10,6 +10,8 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { 
   Home, 
   MessageSquare, 
@@ -24,16 +26,39 @@ import {
   User,
   Loader2,
   Building2,
-  TrendingUp
+  TrendingUp,
+  Check,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
 
 interface NavItem {
   icon: React.ElementType;
   label: string;
   path: string;
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+interface Message {
+  id: string;
+  content: string;
+  sender_id: string;
+  created_at: string;
+  sender?: {
+    full_name: string;
+    avatar_url: string | null;
+  };
 }
 
 const navItems: NavItem[] = [
@@ -50,8 +75,11 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { user, signOut, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null } | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [recentMessages, setRecentMessages] = useState<Message[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -61,41 +89,78 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     if (user) {
-      // Fetch profile and check onboarding
       const fetchProfile = async () => {
         const { data } = await supabase
           .from('profiles')
-          .select('full_name, avatar_url, onboarding_completed')
+          .select('full_name, avatar_url, title, onboarding_completed')
           .eq('user_id', user.id)
           .single();
         
         if (data) {
           setProfile(data);
-          // Redirect to onboarding if not completed
           if (!data.onboarding_completed) {
             navigate('/onboarding');
           }
         } else {
-          // No profile means new user, redirect to onboarding
           navigate('/onboarding');
         }
       };
 
-      // Fetch unread notifications count
       const fetchNotifications = async () => {
-        const { count } = await supabase
+        const { data, count } = await supabase
           .from('notifications')
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
           .eq('user_id', user.id)
-          .eq('is_read', false);
+          .order('created_at', { ascending: false })
+          .limit(10);
         
-        setUnreadNotifications(count || 0);
+        if (data) {
+          setNotifications(data);
+          setUnreadNotifications(data.filter(n => !n.is_read).length);
+        }
+      };
+
+      const fetchRecentMessages = async () => {
+        // Get conversations user is part of
+        const { data: participantData } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', user.id);
+
+        if (participantData && participantData.length > 0) {
+          const conversationIds = participantData.map(p => p.conversation_id);
+          
+          const { data: messagesData, count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact' })
+            .in('conversation_id', conversationIds)
+            .neq('sender_id', user.id)
+            .eq('is_read', false)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (messagesData) {
+            // Fetch sender profiles
+            const messagesWithSenders = await Promise.all(
+              messagesData.map(async (msg) => {
+                const { data: sender } = await supabase
+                  .from('profiles')
+                  .select('full_name, avatar_url')
+                  .eq('user_id', msg.sender_id)
+                  .maybeSingle();
+                return { ...msg, sender };
+              })
+            );
+            setRecentMessages(messagesWithSenders);
+            setUnreadMessages(count || 0);
+          }
+        }
       };
 
       fetchProfile();
       fetchNotifications();
+      fetchRecentMessages();
 
-      // Subscribe to real-time notifications
       const channel = supabase
         .channel('notifications')
         .on(
@@ -106,7 +171,8 @@ const DashboardLayout = () => {
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          () => {
+          (payload) => {
+            setNotifications(prev => [payload.new as Notification, ...prev.slice(0, 9)]);
             setUnreadNotifications(prev => prev + 1);
           }
         )
@@ -116,11 +182,34 @@ const DashboardLayout = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user]);
+  }, [user, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+
+    setNotifications(prev =>
+      prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+    );
+    setUnreadNotifications(prev => Math.max(0, prev - 1));
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user?.id)
+      .eq('is_read', false);
+
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadNotifications(0);
   };
 
   if (loading) {
@@ -136,45 +225,190 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-border bg-card">
-        <div className="flex items-center gap-2 px-6 py-4 border-b border-border">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Desktop Header */}
+      <header className="hidden lg:flex items-center justify-between h-16 px-6 border-b border-border bg-card fixed top-0 left-0 right-0 z-50">
+        {/* Logo */}
+        <div 
+          className="flex items-center gap-3 cursor-pointer"
+          onClick={() => navigate('/dashboard')}
+        >
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
             <Rocket className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold">CampusLaunch</span>
+          <span className="text-xl font-bold">CampusLaunch</span>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-2">
+        {/* Navigation */}
+        <nav className="flex items-center gap-1">
           {navItems.map((item) => (
             <Button
               key={item.path}
               variant={location.pathname === item.path ? 'default' : 'ghost'}
+              size="sm"
               className={cn(
-                'w-full justify-start gap-3',
+                'gap-2',
                 location.pathname === item.path && 'bg-primary text-primary-foreground'
               )}
               onClick={() => navigate(item.path)}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-4 w-4" />
               {item.label}
             </Button>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        {/* Right side - Notifications, Messages, Profile */}
+        <div className="flex items-center gap-2">
+          {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-3">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 bg-popover">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <span className="font-semibold">Notifications</span>
+                {unreadNotifications > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs h-auto py-1"
+                    onClick={markAllNotificationsAsRead}
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    Mark all read
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="h-[300px]">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <Bell className="h-8 w-8 mb-2 opacity-50" />
+                    <span className="text-sm">No notifications yet</span>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={cn(
+                        'px-4 py-3 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 transition-colors',
+                        !notification.is_read && 'bg-primary/5'
+                      )}
+                      onClick={() => markNotificationAsRead(notification.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          'w-2 h-2 rounded-full mt-2 flex-shrink-0',
+                          notification.is_read ? 'bg-muted' : 'bg-primary'
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{notification.title}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Messages */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Mail className="h-5 w-5" />
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 bg-popover">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <span className="font-semibold">Messages</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs h-auto py-1"
+                  onClick={() => navigate('/dashboard/messages')}
+                >
+                  View all
+                </Button>
+              </div>
+              <ScrollArea className="h-[300px]">
+                {recentMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
+                    <span className="text-sm">No new messages</span>
+                  </div>
+                ) : (
+                  recentMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className="px-4 py-3 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate('/dashboard/messages')}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={message.sender?.avatar_url || ''} />
+                          <AvatarFallback className="text-xs">
+                            {message.sender?.full_name?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {message.sender?.full_name || 'Unknown'}
+                          </p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{message.content}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Profile */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="gap-2 pl-2 pr-3">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={profile?.avatar_url || ''} />
                   <AvatarFallback>{profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
-                <span className="truncate">{profile?.full_name || 'User'}</span>
+                <div className="hidden xl:flex flex-col items-start">
+                  <span className="text-sm font-medium truncate max-w-[120px]">
+                    {profile?.full_name || 'User'}
+                  </span>
+                  {profile?.title && (
+                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                      {profile.title}
+                    </span>
+                  )}
+                </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-popover">
+              <div className="px-3 py-2 border-b border-border">
+                <p className="font-medium">{profile?.full_name}</p>
+                <p className="text-xs text-muted-foreground">{profile?.title || 'Member'}</p>
+              </div>
               <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
                 <User className="mr-2 h-4 w-4" />
                 Profile
@@ -191,7 +425,7 @@ const DashboardLayout = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </aside>
+      </header>
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
@@ -203,14 +437,24 @@ const DashboardLayout = () => {
             <Rocket className="h-5 w-5 text-primary" />
             <span className="font-bold">CampusLaunch</span>
           </div>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            {unreadNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
-                {unreadNotifications}
-              </span>
-            )}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/dashboard/messages')}>
+              <Mail className="h-5 w-5" />
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
+              )}
+            </Button>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -240,6 +484,20 @@ const DashboardLayout = () => {
                 <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                   <X className="h-5 w-5" />
                 </Button>
+              </div>
+
+              {/* Mobile profile summary */}
+              <div className="px-6 py-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={profile?.avatar_url || ''} />
+                    <AvatarFallback>{profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{profile?.full_name || 'User'}</p>
+                    <p className="text-sm text-muted-foreground">{profile?.title || 'Member'}</p>
+                  </div>
+                </div>
               </div>
 
               <nav className="flex-1 px-4 py-6 space-y-2">
@@ -276,6 +534,17 @@ const DashboardLayout = () => {
                 </Button>
                 <Button 
                   variant="ghost" 
+                  className="w-full justify-start gap-3"
+                  onClick={() => {
+                    navigate('/dashboard/settings');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Settings className="h-5 w-5" />
+                  Settings
+                </Button>
+                <Button 
+                  variant="ghost" 
                   className="w-full justify-start gap-3 text-destructive"
                   onClick={handleSignOut}
                 >
@@ -289,28 +558,26 @@ const DashboardLayout = () => {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64">
-        <div className="pt-16 lg:pt-0">
-          <Outlet />
-        </div>
+      <main className="flex-1 pt-16">
+        <Outlet />
       </main>
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
         <div className="flex items-center justify-around py-2">
-          {navItems.map((item) => (
+          {navItems.slice(0, 5).map((item) => (
             <Button
               key={item.path}
               variant="ghost"
               size="sm"
               className={cn(
-                'flex-col gap-1 h-auto py-2',
+                'flex-col gap-1 h-auto py-2 px-2',
                 location.pathname === item.path && 'text-primary'
               )}
               onClick={() => navigate(item.path)}
             >
               <item.icon className="h-5 w-5" />
-              <span className="text-xs">{item.label}</span>
+              <span className="text-[10px]">{item.label}</span>
             </Button>
           ))}
         </div>
