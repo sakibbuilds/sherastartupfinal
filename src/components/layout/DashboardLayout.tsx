@@ -57,6 +57,8 @@ interface Notification {
   type: string;
   is_read: boolean;
   created_at: string;
+  reference_id: string | null;
+  reference_type: string | null;
 }
 
 interface Message {
@@ -187,7 +189,8 @@ const DashboardLayout = () => {
       fetchNotifications();
       fetchRecentMessages();
 
-      const channel = supabase
+      // Subscribe to real-time notifications
+      const notificationChannel = supabase
         .channel('notifications')
         .on(
           'postgres_changes',
@@ -204,8 +207,50 @@ const DashboardLayout = () => {
         )
         .subscribe();
 
+      // Subscribe to real-time messages
+      const messageChannel = supabase
+        .channel('dashboard-messages')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages'
+          },
+          async (payload) => {
+            const newMsg = payload.new as any;
+            // Only process if not sender
+            if (newMsg.sender_id !== user.id) {
+              // Check if user is participant
+              const { data: participation } = await supabase
+                .from('conversation_participants')
+                .select('id')
+                .eq('conversation_id', newMsg.conversation_id)
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+              if (participation) {
+                // Fetch sender info
+                const { data: sender } = await supabase
+                  .from('profiles')
+                  .select('full_name, avatar_url')
+                  .eq('user_id', newMsg.sender_id)
+                  .maybeSingle();
+
+                setRecentMessages(prev => [{
+                  ...newMsg,
+                  sender
+                }, ...prev.slice(0, 4)]);
+                setUnreadMessages(prev => prev + 1);
+              }
+            }
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(notificationChannel);
+        supabase.removeChannel(messageChannel);
       };
     }
   }, [user, navigate]);
@@ -225,6 +270,54 @@ const DashboardLayout = () => {
       prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
     );
     setUnreadNotifications(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markNotificationAsRead(notification.id);
+    
+    // Navigate based on notification type and reference
+    if (notification.reference_id) {
+      switch (notification.reference_type) {
+        case 'video_pitch':
+          navigate(`/dashboard/pitches?video=${notification.reference_id}`);
+          break;
+        case 'startup':
+          navigate(`/dashboard/startups/${notification.reference_id}`);
+          break;
+        case 'message':
+          navigate('/dashboard/messages');
+          break;
+        case 'booking':
+          navigate('/dashboard/bookings');
+          break;
+        case 'match':
+          navigate('/dashboard/match');
+          break;
+        case 'profile':
+          navigate(`/dashboard/profile/${notification.reference_id}`);
+          break;
+        default:
+          if (notification.type === 'comment' || notification.type === 'like') {
+            navigate(`/dashboard/pitches?video=${notification.reference_id}`);
+          }
+          break;
+      }
+    } else {
+      switch (notification.type) {
+        case 'message':
+          navigate('/dashboard/messages');
+          break;
+        case 'booking':
+          navigate('/dashboard/bookings');
+          break;
+        case 'match':
+          navigate('/dashboard/match');
+          break;
+        default:
+          navigate('/dashboard');
+          break;
+      }
+    }
   };
 
   const markAllNotificationsAsRead = async () => {
@@ -464,7 +557,7 @@ const DashboardLayout = () => {
                         'px-4 py-3 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 transition-colors',
                         !notification.is_read && 'bg-primary/5'
                       )}
-                      onClick={() => markNotificationAsRead(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
                         <div className={cn(

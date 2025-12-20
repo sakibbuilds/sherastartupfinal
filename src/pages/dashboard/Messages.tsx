@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,10 @@ const Messages = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [otherUser, setOtherUser] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
+  const [otherUser, setOtherUser] = useState<{ full_name: string; avatar_url: string | null; user_id: string } | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -60,11 +63,11 @@ const Messages = () => {
       // Find other participant
       const other = selectedConversation.participants.find(p => p.user_id !== user?.id);
       if (other) {
-        setOtherUser(other.profiles);
+        setOtherUser({ ...other.profiles, user_id: other.user_id });
       }
 
       // Subscribe to new messages
-      const channel = supabase
+      const messageChannel = supabase
         .channel(`messages:${selectedConversation.id}`)
         .on(
           'postgres_changes',
@@ -84,10 +87,43 @@ const Messages = () => {
             }
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${selectedConversation.id}`
+          },
+          (payload) => {
+            const updatedMsg = payload.new as Message;
+            setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+          }
+        )
         .subscribe();
 
+      // Subscribe to typing presence
+      const typingChannel = supabase
+        .channel(`typing:${selectedConversation.id}`)
+        .on('presence', { event: 'sync' }, () => {
+          const state = typingChannel.presenceState();
+          const otherTyping = Object.values(state).flat().some(
+            (presence: any) => presence.user_id !== user?.id && presence.is_typing
+          );
+          setIsTyping(otherTyping);
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await typingChannel.track({ user_id: user?.id, is_typing: false });
+          }
+        });
+
+      typingChannelRef.current = typingChannel;
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(messageChannel);
+        supabase.removeChannel(typingChannel);
+        typingChannelRef.current = null;
       };
     }
   }, [selectedConversation, user]);
@@ -221,6 +257,27 @@ const Messages = () => {
     setSending(false);
   };
 
+  const handleTyping = useCallback(() => {
+    if (typingChannelRef.current && user) {
+      typingChannelRef.current.track({ user_id: user.id, is_typing: true });
+      
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        if (typingChannelRef.current) {
+          typingChannelRef.current.track({ user_id: user.id, is_typing: false });
+        }
+      }, 2000);
+    }
+  }, [user]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    handleTyping();
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -337,9 +394,13 @@ const Messages = () => {
                 <AvatarImage src={otherUser?.avatar_url || ''} />
                 <AvatarFallback>{otherUser?.full_name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
-              <div>
+              <div className="flex flex-col">
                 <p className="font-semibold">{otherUser?.full_name || 'User'}</p>
-                <p className="text-xs text-muted-foreground">Online</p>
+                {isTyping ? (
+                  <p className="text-xs text-primary animate-pulse">typing...</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Online</p>
+                )}
               </div>
             </div>
 
@@ -391,11 +452,11 @@ const Messages = () => {
 
             {/* Message Input */}
             <div className="p-4 border-t border-border">
-              <div className="flex gap-2">
+            <div className="flex gap-2">
                 <Input
                   placeholder="Type a message..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
                   className="flex-1"
                 />

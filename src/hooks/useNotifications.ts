@@ -126,12 +126,50 @@ export const useNotifications = () => {
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
     
-    // Navigate based on notification type
-    if (notification.reference_type === 'video_pitch' && notification.reference_id) {
-      navigate(`/dashboard/pitches?video=${notification.reference_id}`);
-    } else if (notification.reference_type === 'comment' && notification.reference_id) {
-      // For comments, we need to get the video ID from the comment
-      navigate(`/dashboard/pitches?video=${notification.reference_id}`);
+    // Navigate based on notification type and reference
+    if (notification.reference_id) {
+      switch (notification.reference_type) {
+        case 'video_pitch':
+          navigate(`/dashboard/pitches?video=${notification.reference_id}`);
+          break;
+        case 'startup':
+          navigate(`/dashboard/startups/${notification.reference_id}`);
+          break;
+        case 'message':
+          navigate('/dashboard/messages');
+          break;
+        case 'booking':
+          navigate('/dashboard/bookings');
+          break;
+        case 'match':
+          navigate('/dashboard/match');
+          break;
+        case 'profile':
+          navigate(`/dashboard/profile/${notification.reference_id}`);
+          break;
+        default:
+          // For comments on video pitches, navigate to the video
+          if (notification.type === 'comment' || notification.type === 'like') {
+            navigate(`/dashboard/pitches?video=${notification.reference_id}`);
+          }
+          break;
+      }
+    } else {
+      // Fallback navigation based on type
+      switch (notification.type) {
+        case 'message':
+          navigate('/dashboard/messages');
+          break;
+        case 'booking':
+          navigate('/dashboard/bookings');
+          break;
+        case 'match':
+          navigate('/dashboard/match');
+          break;
+        default:
+          navigate('/dashboard');
+          break;
+      }
     }
   };
 
