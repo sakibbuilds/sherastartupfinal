@@ -358,7 +358,10 @@ const Startups = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+              <Card 
+                className="h-full hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate(`/dashboard/startups/${startup.id}`)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">

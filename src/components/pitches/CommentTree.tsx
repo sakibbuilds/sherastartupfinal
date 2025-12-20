@@ -26,6 +26,10 @@ export interface Comment {
     full_name: string;
     avatar_url: string | null;
   };
+  startup?: {
+    id: string;
+    name: string;
+  } | null;
   replies?: Comment[];
 }
 
@@ -89,19 +93,30 @@ const CommentNode = ({
             {comment.user?.full_name?.charAt(0) || 'U'}
           </AvatarFallback>
         </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span 
-              className="font-medium text-sm cursor-pointer hover:underline"
-              onClick={() => navigate(`/dashboard/profile/${comment.user_id}`)}
-            >
-              {comment.user?.full_name || 'Anonymous'}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-            </span>
-          </div>
-          <p className="text-sm mt-1 break-words">{comment.content}</p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span 
+                className="font-medium text-sm cursor-pointer hover:underline"
+                onClick={() => navigate(`/dashboard/profile/${comment.user_id}`)}
+              >
+                {comment.user?.full_name || 'Anonymous'}
+              </span>
+              {comment.startup && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <span 
+                    className="text-xs text-primary cursor-pointer hover:underline"
+                    onClick={() => navigate(`/dashboard/startups/${comment.startup!.id}`)}
+                  >
+                    {comment.startup.name}
+                  </span>
+                </>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+              </span>
+            </div>
+            <p className="text-sm mt-1 break-words">{comment.content}</p>
           
           <div className="flex items-center gap-3 mt-2">
             <button
