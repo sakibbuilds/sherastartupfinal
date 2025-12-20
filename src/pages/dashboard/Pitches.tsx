@@ -61,6 +61,17 @@ const motiveLabels: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
+// Format count as 1K, 2.5K, 1M etc
+const formatCount = (count: number): string => {
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(count >= 10000000 ? 0 : 1).replace(/\.0$/, '') + 'M';
+  }
+  if (count >= 1000) {
+    return (count / 1000).toFixed(count >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'K';
+  }
+  return count.toString();
+};
+
 const Pitches = () => {
   const { user } = useAuth();
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
@@ -208,7 +219,7 @@ const Pitches = () => {
     };
   }, [user]);
 
-  // Track view when video is watched
+  // Track view using edge function (IP-based, 24h cooldown)
   useEffect(() => {
     const currentPitch = pitches[currentIndex];
     if (!currentPitch || viewTrackedRef.current.has(currentPitch.id)) return;
@@ -216,10 +227,13 @@ const Pitches = () => {
     const timer = setTimeout(async () => {
       viewTrackedRef.current.add(currentPitch.id);
       
-      await supabase
-        .from('video_pitches')
-        .update({ views_count: currentPitch.views_count + 1 })
-        .eq('id', currentPitch.id);
+      try {
+        await supabase.functions.invoke('track-view', {
+          body: { video_id: currentPitch.id }
+        });
+      } catch (error) {
+        console.error('Error tracking view:', error);
+      }
     }, 3000); // Track view after 3 seconds
 
     return () => clearTimeout(timer);
@@ -404,6 +418,14 @@ const Pitches = () => {
                 onClick={() => setPlaying(!playing)}
               />
 
+              {/* Mute Button - Top Right */}
+              <button
+                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white z-10"
+                onClick={() => setMuted(!muted)}
+              >
+                {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </button>
+
               {/* Play/Pause Indicator */}
               <AnimatePresence>
                 {!playing && index === currentIndex && (
@@ -429,8 +451,14 @@ const Pitches = () => {
                       <AvatarImage src={pitch.user?.avatar_url || ''} />
                       <AvatarFallback>{pitch.user?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-semibold text-white">{pitch.user?.full_name || 'Anonymous'}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-white">{pitch.user?.full_name || 'Anonymous'}</p>
+                        <span className="flex items-center gap-1 text-white/70 text-xs">
+                          <Eye className="h-3 w-3" />
+                          {formatCount(pitch.views_count)}
+                        </span>
+                      </div>
                       <p className="text-xs text-white/70">{pitch.user?.title || 'Founder'}</p>
                     </div>
                   </div>
@@ -449,14 +477,6 @@ const Pitches = () => {
 
                 {/* Right Side Actions */}
                 <div className="absolute right-4 bottom-24 flex flex-col items-center gap-5 pointer-events-auto">
-                  {/* Views Count */}
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white">
-                      <Eye className="h-6 w-6" />
-                    </div>
-                    <span className="text-white text-xs">{pitch.views_count}</span>
-                  </div>
-
                   <button
                     className="flex flex-col items-center gap-1"
                     onClick={() => handleLike(pitch)}
@@ -467,7 +487,7 @@ const Pitches = () => {
                     )}>
                       <Heart className={cn("h-6 w-6", pitch.isLiked && "fill-current")} />
                     </div>
-                    <span className="text-white text-xs">{pitch.likes_count}</span>
+                    <span className="text-white text-xs">{formatCount(pitch.likes_count)}</span>
                   </button>
 
                   <button
@@ -477,7 +497,7 @@ const Pitches = () => {
                     <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white">
                       <MessageCircle className="h-6 w-6" />
                     </div>
-                    <span className="text-white text-xs">{pitch.comments_count}</span>
+                    <span className="text-white text-xs">{formatCount(pitch.comments_count)}</span>
                   </button>
 
                   <button
@@ -488,15 +508,6 @@ const Pitches = () => {
                       <Share2 className="h-6 w-6" />
                     </div>
                     <span className="text-white text-xs">Share</span>
-                  </button>
-
-                  <button
-                    className="flex flex-col items-center gap-1"
-                    onClick={() => setMuted(!muted)}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white">
-                      {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
-                    </div>
                   </button>
 
                   <button
@@ -526,7 +537,7 @@ const Pitches = () => {
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
         <SheetContent side="bottom" className="h-[70vh] rounded-t-xl">
           <SheetHeader>
-            <SheetTitle>Comments ({pitches[currentIndex]?.comments_count || 0})</SheetTitle>
+            <SheetTitle>Comments ({formatCount(pitches[currentIndex]?.comments_count || 0)})</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col h-[calc(100%-4rem)]">
             <ScrollArea className="flex-1 py-4">
