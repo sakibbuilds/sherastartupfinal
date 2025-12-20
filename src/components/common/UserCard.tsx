@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, Check, MessageCircle } from "lucide-react";
 import { useState } from "react";
+import { usePresence } from "@/hooks/usePresence";
 
 interface UserCardProps {
+  userId?: string;
   name: string;
   university: string;
   role: "founder" | "investor" | "mentor" | "admin";
   avatarUrl?: string;
-  isOnline?: boolean;
   isConnected?: boolean;
   compatibilityScore?: number;
   className?: string;
@@ -31,11 +32,11 @@ const roleLabels = {
 };
 
 export function UserCard({
+  userId,
   name,
   university,
   role,
   avatarUrl,
-  isOnline = false,
   isConnected = false,
   compatibilityScore,
   className,
@@ -43,6 +44,8 @@ export function UserCard({
 }: UserCardProps) {
   const [connected, setConnected] = useState(isConnected);
   const [isLoading, setIsLoading] = useState(false);
+  const { isOnline } = usePresence();
+  const online = userId ? isOnline(userId) : false;
 
   const handleConnect = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,7 +100,7 @@ export function UserCard({
           <span
             className={cn(
               "absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-card",
-              isOnline ? "bg-mint" : "bg-muted-foreground"
+              online ? "bg-mint" : "bg-muted-foreground/40"
             )}
           />
         </div>

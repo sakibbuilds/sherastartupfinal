@@ -36,12 +36,14 @@ import {
   ChevronDown,
   Plus,
   Play,
-  ListVideo
+  ListVideo,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
+import { usePresence } from '@/hooks/usePresence';
 
 interface NavItem {
   icon: React.ElementType;
@@ -106,6 +108,7 @@ const DashboardLayout = () => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [recentMessages, setRecentMessages] = useState<Message[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const { onlineCount } = usePresence();
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(sidebarCollapsed));
@@ -516,6 +519,22 @@ const DashboardLayout = () => {
         )}
       >
         <div className="flex items-center gap-2">
+          {/* Online Users Count */}
+          {onlineCount > 1 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-mint/10 text-mint text-sm">
+                  <span className="w-2 h-2 rounded-full bg-mint animate-pulse" />
+                  <Users className="h-4 w-4" />
+                  <span className="font-medium">{onlineCount}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {onlineCount} users online
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
