@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ interface Comment {
 }
 
 const Feed = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -322,14 +324,22 @@ const Feed = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <Avatar>
+                      <Avatar 
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => navigate(`/dashboard/profile/${post.user_id}`)}
+                      >
                         <AvatarImage src={post.profiles?.avatar_url || ''} />
                         <AvatarFallback>
                           {post.profiles?.full_name?.charAt(0) || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-semibold">{post.profiles?.full_name || 'User'}</p>
+                        <p 
+                          className="font-semibold cursor-pointer hover:underline"
+                          onClick={() => navigate(`/dashboard/profile/${post.user_id}`)}
+                        >
+                          {post.profiles?.full_name || 'User'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {post.profiles?.title || 'Member'} • {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                         </p>

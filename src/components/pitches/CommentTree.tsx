@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -46,6 +47,7 @@ const CommentNode = ({
   onCommentAdded: () => void;
   depth: number;
 }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -78,7 +80,10 @@ const CommentNode = ({
   return (
     <div className={cn("relative", depth > 0 && "ml-6 pl-4 border-l border-border/50")}>
       <div className="flex gap-3 py-2">
-        <Avatar className="h-8 w-8 flex-shrink-0">
+        <Avatar 
+          className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => navigate(`/dashboard/profile/${comment.user_id}`)}
+        >
           <AvatarImage src={comment.user?.avatar_url || ''} />
           <AvatarFallback className="text-xs">
             {comment.user?.full_name?.charAt(0) || 'U'}
@@ -86,7 +91,12 @@ const CommentNode = ({
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">{comment.user?.full_name || 'Anonymous'}</span>
+            <span 
+              className="font-medium text-sm cursor-pointer hover:underline"
+              onClick={() => navigate(`/dashboard/profile/${comment.user_id}`)}
+            >
+              {comment.user?.full_name || 'Anonymous'}
+            </span>
             <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
             </span>
