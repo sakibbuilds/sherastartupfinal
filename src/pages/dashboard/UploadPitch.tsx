@@ -97,11 +97,77 @@ const UploadPitch = () => {
     fetchUserStartups();
   }, [user, preselectedStartupId]);
 
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Auto-generate thumbnail from video
+  const generateThumbnailFromVideo = (videoFile: File): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      
+      video.onloadedmetadata = () => {
+        // Seek to 1 second or 25% of the video, whichever is smaller
+        video.currentTime = Math.min(1, video.duration * 0.25);
+      };
+      
+      video.onseeked = () => {
+        // Set canvas to video dimensions (max 720p for thumbnail)
+        const maxWidth = 720;
+        const maxHeight = 1280;
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            resolve(blob);
+            URL.revokeObjectURL(video.src);
+          }, 'image/jpeg', 0.85);
+        } else {
+          resolve(null);
+        }
+      };
+      
+      video.onerror = () => {
+        console.error('Error loading video for thumbnail generation');
+        resolve(null);
+      };
+      
+      video.src = URL.createObjectURL(videoFile);
+    });
+  };
+
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFormData({ ...formData, video: file });
       setVideoPreview(URL.createObjectURL(file));
+      
+      // Auto-generate thumbnail if none is set
+      if (!formData.thumbnail) {
+        const thumbnailBlob = await generateThumbnailFromVideo(file);
+        if (thumbnailBlob) {
+          const thumbnailFile = new File([thumbnailBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
+          setFormData(prev => ({ ...prev, video: file, thumbnail: thumbnailFile }));
+          setThumbnailPreview(URL.createObjectURL(thumbnailBlob));
+          toast({ title: 'Thumbnail generated', description: 'Auto-generated from your video' });
+        }
+      }
     }
   };
 
