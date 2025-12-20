@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,7 @@ const formatCount = (count: number): string => {
 };
 
 const Pitches = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,68 +148,18 @@ const Pitches = () => {
     fetchPitches(0);
   }, [fetchPitches]);
 
-  // Realtime subscriptions for counts
+  // Realtime subscriptions for counts - only update counts from realtime, not local state
   useEffect(() => {
     const channel = supabase
       .channel('pitch-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'video_pitches' },
+        { event: 'UPDATE', schema: 'public', table: 'video_pitches' },
         (payload) => {
-          if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as VideoPitch;
-            setPitches(prev => prev.map(p => 
-              p.id === updated.id 
-                ? { ...p, views_count: updated.views_count, likes_count: updated.likes_count, comments_count: updated.comments_count }
-                : p
-            ));
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'video_pitch_likes' },
-        (payload) => {
-          const like = payload.new as { video_id: string; user_id: string };
+          const updated = payload.new as VideoPitch;
           setPitches(prev => prev.map(p => 
-            p.id === like.video_id 
-              ? { ...p, likes_count: p.likes_count + 1, isLiked: like.user_id === user?.id ? true : p.isLiked }
-              : p
-          ));
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'video_pitch_likes' },
-        (payload) => {
-          const like = payload.old as { video_id: string; user_id: string };
-          setPitches(prev => prev.map(p => 
-            p.id === like.video_id 
-              ? { ...p, likes_count: Math.max(0, p.likes_count - 1), isLiked: like.user_id === user?.id ? false : p.isLiked }
-              : p
-          ));
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'video_pitch_comments' },
-        (payload) => {
-          const comment = payload.new as { video_id: string };
-          setPitches(prev => prev.map(p => 
-            p.id === comment.video_id 
-              ? { ...p, comments_count: p.comments_count + 1 }
-              : p
-          ));
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'video_pitch_comments' },
-        (payload) => {
-          const comment = payload.old as { video_id: string };
-          setPitches(prev => prev.map(p => 
-            p.id === comment.video_id 
-              ? { ...p, comments_count: Math.max(0, p.comments_count - 1) }
+            p.id === updated.id 
+              ? { ...p, views_count: updated.views_count, likes_count: updated.likes_count, comments_count: updated.comments_count }
               : p
           ));
         }
@@ -217,7 +169,7 @@ const Pitches = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, []);
 
   // Track view using edge function (IP-based, 24h cooldown)
   useEffect(() => {
@@ -282,28 +234,38 @@ const Pitches = () => {
   const handleLike = async (pitch: VideoPitch) => {
     if (!user) return;
 
-    if (pitch.isLiked) {
-      await supabase
+    // Optimistic update for isLiked status only
+    const wasLiked = pitch.isLiked;
+    setPitches(prev => prev.map(p => 
+      p.id === pitch.id 
+        ? { ...p, isLiked: !wasLiked }
+        : p
+    ));
+
+    if (wasLiked) {
+      const { error } = await supabase
         .from('video_pitch_likes')
         .delete()
         .eq('video_id', pitch.id)
         .eq('user_id', user.id);
-
-      setPitches(prev => prev.map(p => 
-        p.id === pitch.id 
-          ? { ...p, isLiked: false, likes_count: p.likes_count - 1 }
-          : p
-      ));
+      
+      if (error) {
+        // Revert on error
+        setPitches(prev => prev.map(p => 
+          p.id === pitch.id ? { ...p, isLiked: wasLiked } : p
+        ));
+      }
     } else {
-      await supabase
+      const { error } = await supabase
         .from('video_pitch_likes')
         .insert({ video_id: pitch.id, user_id: user.id });
-
-      setPitches(prev => prev.map(p => 
-        p.id === pitch.id 
-          ? { ...p, isLiked: true, likes_count: p.likes_count + 1 }
-          : p
-      ));
+      
+      if (error) {
+        // Revert on error
+        setPitches(prev => prev.map(p => 
+          p.id === pitch.id ? { ...p, isLiked: wasLiked } : p
+        ));
+      }
     }
   };
 
@@ -350,11 +312,6 @@ const Pitches = () => {
     if (!error) {
       setNewComment('');
       fetchComments(pitches[currentIndex].id);
-      setPitches(prev => prev.map((p, i) => 
-        i === currentIndex 
-          ? { ...p, comments_count: p.comments_count + 1 }
-          : p
-      ));
     }
   };
 
@@ -374,6 +331,10 @@ const Pitches = () => {
   const handleReport = (pitch: VideoPitch) => {
     setReportingPitch(pitch);
     setReportDialogOpen(true);
+  };
+
+  const handleViewProfile = (userId: string) => {
+    navigate(`/dashboard/profile/${userId}`);
   };
 
   if (loading && pitches.length === 0) {
@@ -447,13 +408,21 @@ const Pitches = () => {
                 {/* Bottom Info */}
                 <div className="absolute bottom-0 left-0 right-16 p-4 bg-gradient-to-t from-black/80 to-transparent">
                   <div className="flex items-center gap-3 mb-3 pointer-events-auto">
-                    <Avatar className="h-10 w-10 border-2 border-white">
+                    <Avatar 
+                      className="h-10 w-10 border-2 border-white cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => handleViewProfile(pitch.user_id)}
+                    >
                       <AvatarImage src={pitch.user?.avatar_url || ''} />
                       <AvatarFallback>{pitch.user?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-white">{pitch.user?.full_name || 'Anonymous'}</p>
+                        <button
+                          onClick={() => handleViewProfile(pitch.user_id)}
+                          className="font-semibold text-white hover:underline"
+                        >
+                          {pitch.user?.full_name || 'Anonymous'}
+                        </button>
                         <span className="flex items-center gap-1 text-white/70 text-xs">
                           <Eye className="h-3 w-3" />
                           {formatCount(pitch.views_count)}
@@ -551,11 +520,6 @@ const Pitches = () => {
                   videoId={pitches[currentIndex]?.id || ''} 
                   onCommentAdded={() => {
                     fetchComments(pitches[currentIndex]?.id);
-                    setPitches(prev => prev.map((p, i) => 
-                      i === currentIndex 
-                        ? { ...p, comments_count: p.comments_count + 1 }
-                        : p
-                    ));
                   }}
                 />
               )}
