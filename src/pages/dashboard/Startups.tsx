@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -105,6 +105,7 @@ const investmentRanges = [
 
 const Startups = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [startups, setStartups] = useState<Startup[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
@@ -112,7 +113,7 @@ const Startups = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStage, setFilterStage] = useState<string>('');
   const [filterIndustry, setFilterIndustry] = useState<string>('');
-  const [filterUniversity, setFilterUniversity] = useState<string>('');
+  const [filterUniversity, setFilterUniversity] = useState<string>(searchParams.get('university') || '');
   const [filterInvestment, setFilterInvestment] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -125,6 +126,25 @@ const Startups = () => {
     stage: true,
     investment: false
   });
+
+  // Sync URL params with filter state
+  useEffect(() => {
+    const universityParam = searchParams.get('university');
+    if (universityParam) {
+      setFilterUniversity(universityParam);
+    }
+  }, [searchParams]);
+
+  // Update URL when university filter changes
+  const handleUniversityFilter = (universityId: string) => {
+    const newValue = filterUniversity === universityId ? '' : universityId;
+    setFilterUniversity(newValue);
+    if (newValue) {
+      setSearchParams({ university: newValue });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   // New startup form
   const [newStartup, setNewStartup] = useState({
@@ -293,6 +313,7 @@ const Startups = () => {
     setFilterUniversity('');
     setFilterInvestment('');
     setSearchQuery('');
+    setSearchParams({});
   };
 
   const hasActiveFilters = filterStage || filterIndustry || filterUniversity || filterInvestment;
@@ -325,7 +346,7 @@ const Startups = () => {
               {universities.filter(uni => counts.universityCounts[uni.id]).map((uni) => (
                 <button
                   key={uni.id}
-                  onClick={() => setFilterUniversity(filterUniversity === uni.id ? '' : uni.id)}
+                  onClick={() => handleUniversityFilter(uni.id)}
                   className={`w-full flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors ${
                     filterUniversity === uni.id 
                       ? 'bg-primary/10 text-primary' 
@@ -466,6 +487,32 @@ const Startups = () => {
             Discover and connect with university startups
             <span className="ml-2 text-sm">({startups.length} total)</span>
           </p>
+          {/* Institution counts summary */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {universities
+              .filter(uni => counts.universityCounts[uni.id])
+              .slice(0, 5)
+              .map(uni => (
+                <button
+                  key={uni.id}
+                  onClick={() => handleUniversityFilter(uni.id)}
+                  className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full transition-colors ${
+                    filterUniversity === uni.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                  }`}
+                >
+                  <GraduationCap className="h-3 w-3" />
+                  {uni.name.length > 20 ? uni.name.slice(0, 20) + '...' : uni.name}
+                  <span className="font-semibold">{counts.universityCounts[uni.id]}</span>
+                </button>
+              ))}
+            {universities.filter(uni => counts.universityCounts[uni.id]).length > 5 && (
+              <span className="text-xs text-muted-foreground self-center">
+                +{universities.filter(uni => counts.universityCounts[uni.id]).length - 5} more
+              </span>
+            )}
+          </div>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -608,7 +655,7 @@ const Startups = () => {
             <Badge variant="secondary" className="gap-1">
               <GraduationCap className="h-3 w-3" />
               {universities.find(u => u.id === filterUniversity)?.name}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterUniversity('')} />
+              <X className="h-3 w-3 cursor-pointer" onClick={() => { setFilterUniversity(''); setSearchParams({}); }} />
             </Badge>
           )}
           {filterIndustry && (
@@ -777,10 +824,16 @@ const Startups = () => {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{startup.founder.full_name}</p>
                             {startup.founder.university && (
-                              <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUniversityFilter(startup.founder!.university!.id);
+                                }}
+                                className="text-xs text-primary hover:underline truncate flex items-center gap-1"
+                              >
                                 <GraduationCap className="h-3 w-3" />
                                 {startup.founder.university.name}
-                              </p>
+                              </button>
                             )}
                           </div>
                           {startup.website && (
