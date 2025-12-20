@@ -130,13 +130,13 @@ const Investors = () => {
             className="pl-10"
           />
         </div>
-        <Select value={filterFocus} onValueChange={setFilterFocus}>
+        <Select value={filterFocus || "all"} onValueChange={(v) => setFilterFocus(v === "all" ? "" : v)}>
           <SelectTrigger className="w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Investment Focus" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Focus Areas</SelectItem>
+            <SelectItem value="all">All Focus Areas</SelectItem>
             {industries.map((ind) => (
               <SelectItem key={ind} value={ind}>{ind}</SelectItem>
             ))}
