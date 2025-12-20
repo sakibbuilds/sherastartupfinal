@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Save, X, Plus } from 'lucide-react';
+import { Loader2, Save, X, Plus, Camera, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { AvatarCropper } from '@/components/common/AvatarCropper';
 
 interface Profile {
   id: string;
@@ -23,6 +24,7 @@ interface Profile {
   expertise: string[] | null;
   hourly_rate: number | null;
   is_available: boolean;
+  linkedin_url: string | null;
 }
 
 const ProfilePage = () => {
@@ -30,7 +32,13 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [newSkill, setNewSkill] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -39,6 +47,7 @@ const ProfilePage = () => {
   const [title, setTitle] = useState('');
   const [expertise, setExpertise] = useState<string[]>([]);
   const [hourlyRate, setHourlyRate] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -65,6 +74,7 @@ const ProfilePage = () => {
       setTitle(data.title || '');
       setExpertise(data.expertise || []);
       setHourlyRate(data.hourly_rate?.toString() || '');
+      setLinkedinUrl(data.linkedin_url || '');
     }
 
     setLoading(false);
@@ -84,6 +94,7 @@ const ProfilePage = () => {
         title: title || null,
         expertise: expertise.length > 0 ? expertise : null,
         hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+        linkedin_url: linkedinUrl || null,
       })
       .eq('user_id', user.id);
 
@@ -94,6 +105,82 @@ const ProfilePage = () => {
     }
 
     setSaving(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please select an image file', variant: 'destructive' });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Please select an image under 10MB', variant: 'destructive' });
+      return;
+    }
+
+    // Read file and open cropper
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return;
+
+    setUploadingAvatar(true);
+    setCropperOpen(false);
+
+    try {
+      // Generate unique filename
+      const fileName = `${user.id}-${Date.now()}.jpg`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('pitch-thumbnails')
+        .upload(filePath, croppedBlob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('pitch-thumbnails')
+        .getPublicUrl(filePath);
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
+      toast({ title: 'Avatar updated!', description: 'Your profile picture has been changed.' });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({ title: 'Upload failed', description: 'Failed to upload avatar. Please try again.', variant: 'destructive' });
+    } finally {
+      setUploadingAvatar(false);
+      setSelectedImage(null);
+    }
   };
 
   const addSkill = () => {
@@ -133,15 +220,55 @@ const ProfilePage = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profile?.avatar_url || ''} />
-                <AvatarFallback className="text-2xl">
-                  {fullName?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
+              {/* Avatar with upload button */}
+              <div className="relative group">
+                <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+                  <AvatarImage src={profile?.avatar_url || ''} />
+                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                    {fullName?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {/* Upload overlay */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                  )}
+                </button>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+              
+              <div className="flex-1">
                 <h2 className="text-xl font-bold">{fullName || 'Your Name'}</h2>
                 <p className="text-muted-foreground">{user?.email}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Change Photo
+                </Button>
               </div>
             </CardTitle>
           </CardHeader>
@@ -174,6 +301,16 @@ const ProfilePage = () => {
                 value={university}
                 onChange={(e) => setUniversity(e.target.value)}
                 placeholder="Stanford University"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+              <Input
+                id="linkedinUrl"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                placeholder="https://linkedin.com/in/yourprofile"
               />
             </div>
 
@@ -249,6 +386,19 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Avatar Cropper Dialog */}
+      {selectedImage && (
+        <AvatarCropper
+          open={cropperOpen}
+          onClose={() => {
+            setCropperOpen(false);
+            setSelectedImage(null);
+          }}
+          imageSrc={selectedImage}
+          onCropComplete={handleCropComplete}
+        />
+      )}
     </div>
   );
 };

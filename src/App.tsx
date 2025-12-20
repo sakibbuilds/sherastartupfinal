@@ -14,6 +14,7 @@ import Match from "./pages/dashboard/Match";
 import Messages from "./pages/dashboard/Messages";
 import Bookings from "./pages/dashboard/Bookings";
 import ProfilePage from "./pages/dashboard/Profile";
+import UserProfilePage from "./pages/dashboard/UserProfile";
 import Startups from "./pages/dashboard/Startups";
 import Investors from "./pages/dashboard/Investors";
 import Pitches from "./pages/dashboard/Pitches";
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="startups" element={<Startups />} />
               <Route path="investors" element={<Investors />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="profile/:userId" element={<UserProfilePage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
