@@ -37,6 +37,13 @@ interface Profile {
   created_at: string;
 }
 
+interface Startup {
+  id: string;
+  name: string;
+  tagline: string | null;
+  industry: string | null;
+}
+
 interface VideoPitch {
   id: string;
   title: string;
@@ -62,6 +69,7 @@ const UserProfilePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [startup, setStartup] = useState<Startup | null>(null);
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
   const [stats, setStats] = useState<Stats>({ totalPitches: 0, totalViews: 0, totalLikes: 0, totalComments: 0 });
   const [loading, setLoading] = useState(true);
@@ -92,6 +100,17 @@ const UserProfilePage = () => {
       }
 
       setProfile(profileData);
+
+      // Fetch user's startup
+      const { data: startupData } = await supabase
+        .from('startups')
+        .select('id, name, tagline, industry')
+        .eq('founder_id', userId)
+        .maybeSingle();
+
+      if (startupData) {
+        setStartup(startupData);
+      }
 
       // Fetch pitches
       const { data: pitchesData } = await supabase
@@ -229,6 +248,20 @@ const UserProfilePage = () => {
                     </Badge>
                   )}
                 </div>
+
+                {startup && (
+                  <div 
+                    className="flex items-center justify-center sm:justify-start gap-2 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigate(`/dashboard/startups/${startup.id}`)}
+                  >
+                    <Badge variant="outline" className="text-primary border-primary">
+                      {startup.name}
+                    </Badge>
+                    {startup.industry && (
+                      <span className="text-sm text-muted-foreground">• {startup.industry}</span>
+                    )}
+                  </div>
+                )}
 
                 {profile.title && (
                   <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2 mb-1">

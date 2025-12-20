@@ -37,6 +37,10 @@ interface Post {
     avatar_url: string | null;
     title: string | null;
   };
+  startup?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface Comment {
@@ -79,7 +83,7 @@ const Feed = () => {
     if (error) {
       console.error('Error fetching posts:', error);
     } else {
-      // Fetch profiles separately
+      // Fetch profiles and startup info separately
       const postsWithProfiles = await Promise.all(
         (data || []).map(async (post) => {
           const { data: profile } = await supabase
@@ -87,7 +91,15 @@ const Feed = () => {
             .select('full_name, avatar_url, title')
             .eq('user_id', post.user_id)
             .single();
-          return { ...post, profiles: profile };
+          
+          // Fetch startup if user is a founder
+          const { data: startup } = await supabase
+            .from('startups')
+            .select('id, name')
+            .eq('founder_id', post.user_id)
+            .maybeSingle();
+            
+          return { ...post, profiles: profile, startup };
         })
       );
       setPosts(postsWithProfiles as Post[]);
@@ -334,12 +346,28 @@ const Feed = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p 
-                          className="font-semibold cursor-pointer hover:underline"
-                          onClick={() => navigate(`/dashboard/profile/${post.user_id}`)}
-                        >
-                          {post.profiles?.full_name || 'User'}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p 
+                            className="font-semibold cursor-pointer hover:underline"
+                            onClick={() => navigate(`/dashboard/profile/${post.user_id}`)}
+                          >
+                            {post.profiles?.full_name || 'User'}
+                          </p>
+                          {post.startup && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <p 
+                                className="text-sm text-primary cursor-pointer hover:underline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/dashboard/startups/${post.startup!.id}`);
+                                }}
+                              >
+                                {post.startup.name}
+                              </p>
+                            </>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {post.profiles?.title || 'Member'} • {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                         </p>

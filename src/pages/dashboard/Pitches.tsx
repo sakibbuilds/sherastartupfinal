@@ -59,6 +59,10 @@ interface VideoPitch {
     avatar_url: string | null;
     title: string | null;
   };
+  startup?: {
+    id: string;
+    name: string;
+  } | null;
   isLiked?: boolean;
 }
 
@@ -157,6 +161,13 @@ const Pitches = () => {
             .eq('user_id', pitch.user_id)
             .maybeSingle();
 
+          // Fetch startup if user is a founder
+          const { data: startup } = await supabase
+            .from('startups')
+            .select('id, name')
+            .eq('founder_id', pitch.user_id)
+            .maybeSingle();
+
           let isLiked = false;
           if (user) {
             const { data: likeData } = await supabase
@@ -168,7 +179,7 @@ const Pitches = () => {
             isLiked = !!likeData;
           }
 
-          return { ...pitch, user: profile, isLiked };
+          return { ...pitch, user: profile, startup, isLiked };
         })
       );
 
@@ -363,7 +374,14 @@ const Pitches = () => {
             .select('full_name, avatar_url')
             .eq('user_id', comment.user_id)
             .maybeSingle();
-          return { ...comment, user: profile };
+          
+          const { data: startup } = await supabase
+            .from('startups')
+            .select('id, name')
+            .eq('founder_id', comment.user_id)
+            .maybeSingle();
+            
+          return { ...comment, user: profile, startup };
         })
       );
       setComments(commentsWithUsers);
@@ -634,13 +652,24 @@ const Pitches = () => {
                       <AvatarFallback>{pitch.user?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => handleViewProfile(pitch.user_id)}
                           className="font-semibold text-white hover:underline"
                         >
                           {pitch.user?.full_name || 'Anonymous'}
                         </button>
+                        {pitch.startup && (
+                          <>
+                            <span className="text-white/50">•</span>
+                            <button
+                              onClick={() => navigate(`/dashboard/startups/${pitch.startup!.id}`)}
+                              className="text-primary hover:underline text-sm"
+                            >
+                              {pitch.startup.name}
+                            </button>
+                          </>
+                        )}
                         <span className="flex items-center gap-1 text-white/70 text-xs">
                           <Eye className="h-3 w-3" />
                           {formatCount(pitch.views_count)}
