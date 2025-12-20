@@ -13,9 +13,12 @@ import {
   Eye,
   Trash2,
   Plus,
-  Video
+  Video,
+  X,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -29,6 +32,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 import { formatDistanceToNow } from 'date-fns';
 
 interface VideoPitch {
@@ -53,11 +60,23 @@ const motiveLabels: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
+const formatCount = (count: number): string => {
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(count >= 10000000 ? 0 : 1).replace(/\.0$/, '') + 'M';
+  }
+  if (count >= 1000) {
+    return (count / 1000).toFixed(count >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'K';
+  }
+  return count.toString();
+};
+
 const MyPitches = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPitch, setSelectedPitch] = useState<VideoPitch | null>(null);
+  const [muted, setMuted] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -136,7 +155,10 @@ const MyPitches = () => {
               transition={{ delay: index * 0.05 }}
             >
               <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="relative aspect-video bg-muted">
+                <div 
+                  className="relative aspect-video bg-muted cursor-pointer group"
+                  onClick={() => setSelectedPitch(pitch)}
+                >
                   {pitch.thumbnail_url ? (
                     <img
                       src={pitch.thumbnail_url}
@@ -150,15 +172,10 @@ const MyPitches = () => {
                       muted
                     />
                   )}
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => navigate('/dashboard/pitches')}
-                    >
-                      <Play className="h-5 w-5" />
-                    </Button>
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center">
+                      <Play className="h-6 w-6 text-black ml-1" />
+                    </div>
                   </div>
                 </div>
                 <CardContent className="p-4">
@@ -177,15 +194,15 @@ const MyPitches = () => {
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-1">
                         <Eye className="h-4 w-4" />
-                        {pitch.views_count}
+                        {formatCount(pitch.views_count)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Heart className="h-4 w-4" />
-                        {pitch.likes_count}
+                        {formatCount(pitch.likes_count)}
                       </span>
                       <span className="flex items-center gap-1">
                         <MessageCircle className="h-4 w-4" />
-                        {pitch.comments_count}
+                        {formatCount(pitch.comments_count)}
                       </span>
                     </div>
                     <AlertDialog>
@@ -222,6 +239,55 @@ const MyPitches = () => {
           ))}
         </div>
       )}
+
+      {/* Video Player Modal */}
+      <Dialog open={!!selectedPitch} onOpenChange={(open) => !open && setSelectedPitch(null)}>
+        <DialogContent className="max-w-4xl p-0 bg-black border-none overflow-hidden">
+          <AnimatePresence>
+            {selectedPitch && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="relative"
+              >
+                <video
+                  src={selectedPitch.video_url}
+                  className="w-full max-h-[80vh] object-contain"
+                  controls
+                  autoPlay
+                  muted={muted}
+                />
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button
+                    onClick={() => setMuted(!muted)}
+                    className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                  >
+                    {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                  </button>
+                  <button
+                    onClick={() => setSelectedPitch(null)}
+                    className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                  <h3 className="font-bold text-white text-lg">{selectedPitch.title}</h3>
+                  {selectedPitch.motive && motiveLabels[selectedPitch.motive] && (
+                    <Badge className={cn("mt-1", motiveLabels[selectedPitch.motive].color)}>
+                      {motiveLabels[selectedPitch.motive].label}
+                    </Badge>
+                  )}
+                  {selectedPitch.description && (
+                    <p className="text-white/80 text-sm mt-2">{selectedPitch.description}</p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
