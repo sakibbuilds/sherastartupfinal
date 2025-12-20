@@ -325,11 +325,18 @@ export type Database = {
           full_name: string
           hourly_rate: number | null
           id: string
+          investment_focus: string[] | null
+          investment_range_max: number | null
+          investment_range_min: number | null
           is_available: boolean | null
+          linkedin_url: string | null
+          onboarding_completed: boolean | null
           title: string | null
           university: string | null
+          university_id: string | null
           updated_at: string
           user_id: string
+          user_type: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -339,11 +346,18 @@ export type Database = {
           full_name: string
           hourly_rate?: number | null
           id?: string
+          investment_focus?: string[] | null
+          investment_range_max?: number | null
+          investment_range_min?: number | null
           is_available?: boolean | null
+          linkedin_url?: string | null
+          onboarding_completed?: boolean | null
           title?: string | null
           university?: string | null
+          university_id?: string | null
           updated_at?: string
           user_id: string
+          user_type?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -353,11 +367,134 @@ export type Database = {
           full_name?: string
           hourly_rate?: number | null
           id?: string
+          investment_focus?: string[] | null
+          investment_range_max?: number | null
+          investment_range_min?: number | null
           is_available?: boolean | null
+          linkedin_url?: string | null
+          onboarding_completed?: boolean | null
           title?: string | null
           university?: string | null
+          university_id?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: string | null
+        }
+        Relationships: []
+      }
+      startup_team_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          startup_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: string
+          startup_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          startup_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_team_members_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      startups: {
+        Row: {
+          created_at: string
+          description: string | null
+          founder_id: string
+          funding_goal: number | null
+          funding_raised: number | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          looking_for: string[] | null
+          name: string
+          pitch_video_url: string | null
+          stage: string | null
+          tagline: string | null
+          team_size: number | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          founder_id: string
+          funding_goal?: number | null
+          funding_raised?: number | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          looking_for?: string[] | null
+          name: string
+          pitch_video_url?: string | null
+          stage?: string | null
+          tagline?: string | null
+          team_size?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          founder_id?: string
+          funding_goal?: number | null
+          funding_raised?: number | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          looking_for?: string[] | null
+          name?: string
+          pitch_video_url?: string | null
+          stage?: string | null
+          tagline?: string | null
+          team_size?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      universities: {
+        Row: {
+          created_at: string
+          id: string
+          is_custom: boolean | null
+          location: string | null
+          name: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_custom?: boolean | null
+          location?: string | null
+          name: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_custom?: boolean | null
+          location?: string | null
+          name?: string
+          type?: string
         }
         Relationships: []
       }
