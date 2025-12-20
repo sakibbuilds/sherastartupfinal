@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import CommentTree, { Comment } from '@/components/pitches/CommentTree';
 import ReportPitchDialog from '@/components/pitches/ReportPitchDialog';
+import { StartupBadge } from '@/components/common/StartupBadge';
 
 interface VideoPitch {
   id: string;
@@ -660,15 +661,10 @@ const Pitches = () => {
                           {pitch.user?.full_name || 'Anonymous'}
                         </button>
                         {pitch.startup && (
-                          <>
-                            <span className="text-white/50">•</span>
-                            <button
-                              onClick={() => navigate(`/dashboard/startups/${pitch.startup!.id}`)}
-                              className="text-primary hover:underline text-sm"
-                            >
-                              {pitch.startup.name}
-                            </button>
-                          </>
+                          <StartupBadge 
+                            startup={pitch.startup} 
+                            className="bg-primary/30 border-none"
+                          />
                         )}
                         <span className="flex items-center gap-1 text-white/70 text-xs">
                           <Eye className="h-3 w-3" />

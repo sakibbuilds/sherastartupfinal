@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { StartupBadge } from '@/components/common/StartupBadge';
 
 interface Post {
   id: string;
@@ -346,31 +347,22 @@ const Feed = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p 
-                            className="font-semibold cursor-pointer hover:underline"
-                            onClick={() => navigate(`/dashboard/profile/${post.user_id}`)}
-                          >
-                            {post.profiles?.full_name || 'User'}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p 
+                              className="font-semibold cursor-pointer hover:underline"
+                              onClick={() => navigate(`/dashboard/profile/${post.user_id}`)}
+                            >
+                              {post.profiles?.full_name || 'User'}
+                            </p>
+                            {post.startup && (
+                              <StartupBadge startup={post.startup} />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {post.profiles?.title || 'Member'} • {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                           </p>
-                          {post.startup && (
-                            <>
-                              <span className="text-muted-foreground">•</span>
-                              <p 
-                                className="text-sm text-primary cursor-pointer hover:underline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/dashboard/startups/${post.startup!.id}`);
-                                }}
-                              >
-                                {post.startup.name}
-                              </p>
-                            </>
-                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {post.profiles?.title || 'Member'} • {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                        </p>
                       </div>
                     </div>
                     {post.user_id === user?.id && (

@@ -15,6 +15,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StartupBadge } from '@/components/common/StartupBadge';
 
 export interface Comment {
   id: string;
@@ -102,15 +103,7 @@ const CommentNode = ({
                 {comment.user?.full_name || 'Anonymous'}
               </span>
               {comment.startup && (
-                <>
-                  <span className="text-muted-foreground">•</span>
-                  <span 
-                    className="text-xs text-primary cursor-pointer hover:underline"
-                    onClick={() => navigate(`/dashboard/startups/${comment.startup!.id}`)}
-                  >
-                    {comment.startup.name}
-                  </span>
-                </>
+                <StartupBadge startup={comment.startup} className="text-xs py-0 h-5" />
               )}
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}

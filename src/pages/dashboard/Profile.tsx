@@ -144,13 +144,13 @@ const ProfilePage = () => {
     setCropperOpen(false);
 
     try {
-      // Generate unique filename
-      const fileName = `${user.id}-${Date.now()}.jpg`;
-      const filePath = `avatars/${fileName}`;
+      // Generate unique filename with user folder structure
+      const fileName = `${Date.now()}.jpg`;
+      const filePath = `${user.id}/${fileName}`;
 
-      // Upload to Supabase Storage
+      // Upload to avatars bucket
       const { error: uploadError } = await supabase.storage
-        .from('pitch-thumbnails')
+        .from('avatars')
         .upload(filePath, croppedBlob, {
           contentType: 'image/jpeg',
           upsert: true
@@ -160,7 +160,7 @@ const ProfilePage = () => {
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('pitch-thumbnails')
+        .from('avatars')
         .getPublicUrl(filePath);
 
       // Update profile
