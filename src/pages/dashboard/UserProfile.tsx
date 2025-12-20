@@ -20,10 +20,17 @@ import {
   Edit,
   ExternalLink,
   UserPlus,
-  UserCheck
+  UserCheck,
+  Users
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+
+interface MutualConnection {
+  user_id: string;
+  full_name: string;
+  avatar_url: string | null;
+}
 
 interface Profile {
   id: string;
@@ -78,6 +85,7 @@ const UserProfilePage = () => {
   const [notFound, setNotFound] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionLoading, setConnectionLoading] = useState(false);
+  const [mutualConnections, setMutualConnections] = useState<MutualConnection[]>([]);
 
   const isOwnProfile = user?.id === userId;
 
@@ -86,6 +94,7 @@ const UserProfilePage = () => {
       fetchUserData();
       if (user && userId !== user.id) {
         checkConnection();
+        fetchMutualConnections();
       }
     }
   }, [userId, user]);
@@ -101,6 +110,48 @@ const UserProfilePage = () => {
       .maybeSingle();
     
     setIsConnected(!!data);
+  };
+
+  const fetchMutualConnections = async () => {
+    if (!user || !userId) return;
+
+    // Get current user's connections
+    const { data: myConnections } = await supabase
+      .from('matches')
+      .select('user_id, matched_user_id')
+      .or(`user_id.eq.${user.id},matched_user_id.eq.${user.id}`)
+      .eq('status', 'accepted');
+
+    // Get target user's connections
+    const { data: theirConnections } = await supabase
+      .from('matches')
+      .select('user_id, matched_user_id')
+      .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
+      .eq('status', 'accepted');
+
+    if (!myConnections || !theirConnections) return;
+
+    // Extract connection user IDs
+    const myConnectionIds = new Set(
+      myConnections.flatMap(c => [c.user_id, c.matched_user_id]).filter(id => id !== user.id)
+    );
+    const theirConnectionIds = new Set(
+      theirConnections.flatMap(c => [c.user_id, c.matched_user_id]).filter(id => id !== userId)
+    );
+
+    // Find mutual connections
+    const mutualIds = [...myConnectionIds].filter(id => theirConnectionIds.has(id));
+
+    if (mutualIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', mutualIds);
+
+      if (profiles) {
+        setMutualConnections(profiles);
+      }
+    }
   };
 
   const handleConnect = async () => {
@@ -272,11 +323,11 @@ const UserProfilePage = () => {
       >
         {/* Profile Header */}
         <Card className="mb-6 relative overflow-hidden">
-          {/* University Badge - Top Right */}
+          {/* University Badge - Top Right - More Visible */}
           {profile.university && (
             <div className="absolute top-4 right-4 z-10">
-              <Badge className="bg-primary/10 text-primary border border-primary/20 flex items-center gap-1.5 px-3 py-1.5">
-                <GraduationCap className="h-3.5 w-3.5" />
+              <Badge className="bg-primary text-primary-foreground shadow-md flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium">
+                <GraduationCap className="h-4 w-4" />
                 {profile.university}
               </Badge>
             </div>
@@ -386,6 +437,43 @@ const UserProfilePage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Mutual Connections Section - Only show for other users */}
+        {!isOwnProfile && mutualConnections.length > 0 && (
+          <Card className="mb-6 bg-gradient-to-br from-secondary/30 to-secondary/10 border-secondary/30">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span className="font-medium">{mutualConnections.length} mutual connection{mutualConnections.length > 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex -space-x-2">
+                  {mutualConnections.slice(0, 5).map((connection) => (
+                    <Avatar 
+                      key={connection.user_id} 
+                      className="h-8 w-8 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110"
+                      onClick={() => navigate(`/dashboard/profile/${connection.user_id}`)}
+                    >
+                      <AvatarImage src={connection.avatar_url || ''} />
+                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                        {connection.full_name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {mutualConnections.length > 5 && (
+                    <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs font-medium">
+                      +{mutualConnections.length - 5}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 text-sm text-muted-foreground truncate">
+                  {mutualConnections.slice(0, 2).map(c => c.full_name).join(', ')}
+                  {mutualConnections.length > 2 && ` and ${mutualConnections.length - 2} others`}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
