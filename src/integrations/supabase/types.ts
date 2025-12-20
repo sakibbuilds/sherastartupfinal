@@ -251,6 +251,47 @@ export type Database = {
         }
         Relationships: []
       }
+      pitch_reports: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          reporter_id: string
+          status: string | null
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reporter_id: string
+          status?: string | null
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reporter_id?: string
+          status?: string | null
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pitch_reports_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "video_pitches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_likes: {
         Row: {
           created_at: string
@@ -524,6 +565,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_id: string | null
           user_id: string
           video_id: string
         }
@@ -531,6 +573,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           user_id: string
           video_id: string
         }
@@ -538,10 +581,18 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           user_id?: string
           video_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "video_pitch_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "video_pitch_comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "video_pitch_comments_video_id_fkey"
             columns: ["video_id"]

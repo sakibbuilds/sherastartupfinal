@@ -14,7 +14,9 @@ import {
   Volume2, 
   VolumeX,
   Play,
-  Send
+  Send,
+  Flag,
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -25,7 +27,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { formatDistanceToNow } from 'date-fns';
+import CommentTree, { Comment } from '@/components/pitches/CommentTree';
+import ReportPitchDialog from '@/components/pitches/ReportPitchDialog';
 
 interface VideoPitch {
   id: string;
@@ -45,17 +48,6 @@ interface VideoPitch {
     title: string | null;
   };
   isLiked?: boolean;
-}
-
-interface Comment {
-  id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  user?: {
-    full_name: string;
-    avatar_url: string | null;
-  };
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -82,9 +74,12 @@ const Pitches = () => {
   const [loadingComments, setLoadingComments] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportingPitch, setReportingPitch] = useState<VideoPitch | null>(null);
 
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewTrackedRef = useRef<Set<string>>(new Set());
 
   const fetchPitches = useCallback(async (pageNum: number, append = false) => {
     const { data, error } = await supabase
@@ -135,9 +130,100 @@ const Pitches = () => {
     setLoading(false);
   }, [user]);
 
+  // Initial fetch
   useEffect(() => {
     fetchPitches(0);
   }, [fetchPitches]);
+
+  // Realtime subscriptions for counts
+  useEffect(() => {
+    const channel = supabase
+      .channel('pitch-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'video_pitches' },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as VideoPitch;
+            setPitches(prev => prev.map(p => 
+              p.id === updated.id 
+                ? { ...p, views_count: updated.views_count, likes_count: updated.likes_count, comments_count: updated.comments_count }
+                : p
+            ));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'video_pitch_likes' },
+        (payload) => {
+          const like = payload.new as { video_id: string; user_id: string };
+          setPitches(prev => prev.map(p => 
+            p.id === like.video_id 
+              ? { ...p, likes_count: p.likes_count + 1, isLiked: like.user_id === user?.id ? true : p.isLiked }
+              : p
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'video_pitch_likes' },
+        (payload) => {
+          const like = payload.old as { video_id: string; user_id: string };
+          setPitches(prev => prev.map(p => 
+            p.id === like.video_id 
+              ? { ...p, likes_count: Math.max(0, p.likes_count - 1), isLiked: like.user_id === user?.id ? false : p.isLiked }
+              : p
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'video_pitch_comments' },
+        (payload) => {
+          const comment = payload.new as { video_id: string };
+          setPitches(prev => prev.map(p => 
+            p.id === comment.video_id 
+              ? { ...p, comments_count: p.comments_count + 1 }
+              : p
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'video_pitch_comments' },
+        (payload) => {
+          const comment = payload.old as { video_id: string };
+          setPitches(prev => prev.map(p => 
+            p.id === comment.video_id 
+              ? { ...p, comments_count: Math.max(0, p.comments_count - 1) }
+              : p
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Track view when video is watched
+  useEffect(() => {
+    const currentPitch = pitches[currentIndex];
+    if (!currentPitch || viewTrackedRef.current.has(currentPitch.id)) return;
+
+    const timer = setTimeout(async () => {
+      viewTrackedRef.current.add(currentPitch.id);
+      
+      await supabase
+        .from('video_pitches')
+        .update({ views_count: currentPitch.views_count + 1 })
+        .eq('id', currentPitch.id);
+    }, 3000); // Track view after 3 seconds
+
+    return () => clearTimeout(timer);
+  }, [currentIndex, pitches]);
 
   useEffect(() => {
     Object.entries(videoRefs.current).forEach(([id, video]) => {
@@ -213,7 +299,7 @@ const Pitches = () => {
       .from('video_pitch_comments')
       .select('*')
       .eq('video_id', videoId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (data) {
       const commentsWithUsers = await Promise.all(
@@ -269,6 +355,11 @@ const Pitches = () => {
       navigator.clipboard.writeText(window.location.href);
       toast({ title: 'Link copied!', description: 'Share link copied to clipboard.' });
     }
+  };
+
+  const handleReport = (pitch: VideoPitch) => {
+    setReportingPitch(pitch);
+    setReportDialogOpen(true);
   };
 
   if (loading && pitches.length === 0) {
@@ -357,7 +448,15 @@ const Pitches = () => {
                 </div>
 
                 {/* Right Side Actions */}
-                <div className="absolute right-4 bottom-24 flex flex-col items-center gap-6 pointer-events-auto">
+                <div className="absolute right-4 bottom-24 flex flex-col items-center gap-5 pointer-events-auto">
+                  {/* Views Count */}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white">
+                      <Eye className="h-6 w-6" />
+                    </div>
+                    <span className="text-white text-xs">{pitch.views_count}</span>
+                  </div>
+
                   <button
                     className="flex flex-col items-center gap-1"
                     onClick={() => handleLike(pitch)}
@@ -399,6 +498,16 @@ const Pitches = () => {
                       {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
                     </div>
                   </button>
+
+                  <button
+                    className="flex flex-col items-center gap-1"
+                    onClick={() => handleReport(pitch)}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white hover:text-destructive transition-colors">
+                      <Flag className="h-5 w-5" />
+                    </div>
+                    <span className="text-white text-xs">Report</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -425,33 +534,19 @@ const Pitches = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
-              ) : comments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No comments yet. Be the first!</p>
-                </div>
               ) : (
-                <div className="space-y-4">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={comment.user?.avatar_url || ''} />
-                        <AvatarFallback className="text-xs">
-                          {comment.user?.full_name?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{comment.user?.full_name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                          </span>
-                        </div>
-                        <p className="text-sm">{comment.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <CommentTree 
+                  comments={comments} 
+                  videoId={pitches[currentIndex]?.id || ''} 
+                  onCommentAdded={() => {
+                    fetchComments(pitches[currentIndex]?.id);
+                    setPitches(prev => prev.map((p, i) => 
+                      i === currentIndex 
+                        ? { ...p, comments_count: p.comments_count + 1 }
+                        : p
+                    ));
+                  }}
+                />
               )}
             </ScrollArea>
             <div className="flex gap-2 pt-4 border-t">
@@ -468,6 +563,16 @@ const Pitches = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Report Dialog */}
+      {reportingPitch && (
+        <ReportPitchDialog
+          open={reportDialogOpen}
+          onOpenChange={setReportDialogOpen}
+          videoId={reportingPitch.id}
+          videoTitle={reportingPitch.title}
+        />
+      )}
     </div>
   );
 };
