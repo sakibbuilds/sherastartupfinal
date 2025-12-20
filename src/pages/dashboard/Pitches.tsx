@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -95,6 +95,7 @@ const formatCount = (count: number): string => {
 
 const Pitches = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
   const [filteredPitches, setFilteredPitches] = useState<VideoPitch[]>([]);
@@ -110,6 +111,7 @@ const Pitches = () => {
   const [page, setPage] = useState(0);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportingPitch, setReportingPitch] = useState<VideoPitch | null>(null);
+  const [initialVideoId, setInitialVideoId] = useState<string | null>(null);
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,6 +121,16 @@ const Pitches = () => {
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const viewTrackedRef = useRef<Set<string>>(new Set());
+
+  // Check for video query param on mount
+  useEffect(() => {
+    const videoId = searchParams.get('video');
+    if (videoId) {
+      setInitialVideoId(videoId);
+      // Clear the query param
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   const fetchPitches = useCallback(async (pageNum: number, append = false) => {
     const { data, error } = await supabase
@@ -169,7 +181,7 @@ const Pitches = () => {
     setLoading(false);
   }, [user]);
 
-  // Apply filters
+  // Apply filters and handle initial video navigation
   useEffect(() => {
     let result = [...pitches];
 
@@ -189,8 +201,28 @@ const Pitches = () => {
     }
 
     setFilteredPitches(result);
-    setCurrentIndex(0);
-  }, [pitches, searchQuery, selectedMotives]);
+
+    // If we have an initial video ID, scroll to it
+    if (initialVideoId && result.length > 0) {
+      const videoIndex = result.findIndex(p => p.id === initialVideoId);
+      if (videoIndex !== -1) {
+        setCurrentIndex(videoIndex);
+        // Scroll to the video after a short delay
+        setTimeout(() => {
+          if (containerRef.current) {
+            const itemHeight = containerRef.current.clientHeight;
+            containerRef.current.scrollTo({
+              top: videoIndex * itemHeight,
+              behavior: 'instant'
+            });
+          }
+        }, 100);
+        setInitialVideoId(null);
+      }
+    } else if (!initialVideoId) {
+      setCurrentIndex(0);
+    }
+  }, [pitches, searchQuery, selectedMotives, initialVideoId]);
 
   // Initial fetch
   useEffect(() => {
