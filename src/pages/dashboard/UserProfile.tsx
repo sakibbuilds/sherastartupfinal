@@ -18,7 +18,9 @@ import {
   MessageSquare,
   ArrowLeft,
   Edit,
-  ExternalLink
+  ExternalLink,
+  UserPlus,
+  UserCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -74,14 +76,54 @@ const UserProfilePage = () => {
   const [stats, setStats] = useState<Stats>({ totalPitches: 0, totalViews: 0, totalLikes: 0, totalComments: 0 });
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionLoading, setConnectionLoading] = useState(false);
 
   const isOwnProfile = user?.id === userId;
 
   useEffect(() => {
     if (userId) {
       fetchUserData();
+      if (user && userId !== user.id) {
+        checkConnection();
+      }
     }
-  }, [userId]);
+  }, [userId, user]);
+
+  const checkConnection = async () => {
+    if (!user || !userId) return;
+    
+    const { data } = await supabase
+      .from('matches')
+      .select('id, status')
+      .or(`and(user_id.eq.${user.id},matched_user_id.eq.${userId}),and(user_id.eq.${userId},matched_user_id.eq.${user.id})`)
+      .eq('status', 'accepted')
+      .maybeSingle();
+    
+    setIsConnected(!!data);
+  };
+
+  const handleConnect = async () => {
+    if (!user || !userId) return;
+    
+    setConnectionLoading(true);
+    try {
+      await supabase
+        .from('matches')
+        .insert({
+          user_id: user.id,
+          matched_user_id: userId,
+          status: 'pending'
+        });
+      
+      // For demo, auto-accept
+      setIsConnected(true);
+    } catch (error) {
+      console.error('Error connecting:', error);
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
 
   const fetchUserData = async () => {
     setLoading(true);
@@ -229,7 +271,17 @@ const UserProfilePage = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         {/* Profile Header */}
-        <Card className="mb-6">
+        <Card className="mb-6 relative overflow-hidden">
+          {/* University Badge - Top Right */}
+          {profile.university && (
+            <div className="absolute top-4 right-4 z-10">
+              <Badge className="bg-primary/10 text-primary border border-primary/20 flex items-center gap-1.5 px-3 py-1.5">
+                <GraduationCap className="h-3.5 w-3.5" />
+                {profile.university}
+              </Badge>
+            </div>
+          )}
+
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
               <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
@@ -264,16 +316,9 @@ const UserProfilePage = () => {
                 )}
 
                 {profile.title && (
-                  <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2 mb-1">
+                  <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2 mb-3">
                     <Briefcase className="h-4 w-4" />
                     {profile.title}
-                  </p>
-                )}
-
-                {profile.university && (
-                  <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2 mb-3">
-                    <GraduationCap className="h-4 w-4" />
-                    {profile.university}
                   </p>
                 )}
 
@@ -293,7 +338,8 @@ const UserProfilePage = () => {
                   </div>
                 )}
 
-                <div className="flex gap-2 justify-center sm:justify-start">
+                {/* Action Buttons */}
+                <div className="flex gap-3 justify-center sm:justify-start">
                   {isOwnProfile ? (
                     <Button onClick={() => navigate('/dashboard/profile')}>
                       <Edit className="h-4 w-4 mr-2" />
@@ -301,17 +347,36 @@ const UserProfilePage = () => {
                     </Button>
                   ) : (
                     <>
+                      {isConnected ? (
+                        <Button variant="secondary" disabled>
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Connected
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline"
+                          onClick={handleConnect}
+                          disabled={connectionLoading}
+                        >
+                          {connectionLoading ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <UserPlus className="h-4 w-4 mr-2" />
+                          )}
+                          Connect
+                        </Button>
+                      )}
                       <Button onClick={handleMessage}>
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Message
                       </Button>
                       {profile.linkedin_url && (
                         <Button 
-                          variant="outline"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => window.open(profile.linkedin_url!, '_blank')}
                         >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          LinkedIn
+                          <ExternalLink className="h-4 w-4" />
                         </Button>
                       )}
                     </>
@@ -323,31 +388,39 @@ const UserProfilePage = () => {
         </Card>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <Video className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10 flex items-center justify-center">
+                <Video className="h-5 w-5 text-primary" />
+              </div>
               <p className="text-2xl font-bold">{stats.totalPitches}</p>
               <p className="text-xs text-muted-foreground">Pitches</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <Eye className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+          <Card className="bg-gradient-to-br from-sky/5 to-sky/10 border-sky/20">
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-sky/10 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-sky" />
+              </div>
               <p className="text-2xl font-bold">{stats.totalViews}</p>
               <p className="text-xs text-muted-foreground">Views</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <Heart className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+          <Card className="bg-gradient-to-br from-coral/5 to-coral/10 border-coral/20">
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-coral/10 flex items-center justify-center">
+                <Heart className="h-5 w-5 text-coral" />
+              </div>
               <p className="text-2xl font-bold">{stats.totalLikes}</p>
               <p className="text-xs text-muted-foreground">Likes</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <MessageSquare className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+          <Card className="bg-gradient-to-br from-mint/5 to-mint/10 border-mint/20">
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-mint/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-mint" />
+              </div>
               <p className="text-2xl font-bold">{stats.totalComments}</p>
               <p className="text-xs text-muted-foreground">Comments</p>
             </CardContent>
