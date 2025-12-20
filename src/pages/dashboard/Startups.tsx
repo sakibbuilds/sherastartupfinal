@@ -319,23 +319,23 @@ const Startups = () => {
             className="pl-10"
           />
         </div>
-        <Select value={filterStage} onValueChange={setFilterStage}>
+        <Select value={filterStage || "all"} onValueChange={(v) => setFilterStage(v === "all" ? "" : v)}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Stages" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Stages</SelectItem>
+            <SelectItem value="all">All Stages</SelectItem>
             {stages.map((s) => (
               <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterIndustry} onValueChange={setFilterIndustry}>
+        <Select value={filterIndustry || "all"} onValueChange={(v) => setFilterIndustry(v === "all" ? "" : v)}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Industries" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Industries</SelectItem>
+            <SelectItem value="all">All Industries</SelectItem>
             {industries.map((ind) => (
               <SelectItem key={ind} value={ind}>{ind}</SelectItem>
             ))}
