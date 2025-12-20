@@ -588,6 +588,7 @@ export type Database = {
           duration_seconds: number | null
           id: string
           likes_count: number | null
+          motive: string | null
           startup_id: string | null
           thumbnail_url: string | null
           title: string
@@ -603,6 +604,7 @@ export type Database = {
           duration_seconds?: number | null
           id?: string
           likes_count?: number | null
+          motive?: string | null
           startup_id?: string | null
           thumbnail_url?: string | null
           title: string
@@ -618,6 +620,7 @@ export type Database = {
           duration_seconds?: number | null
           id?: string
           likes_count?: number | null
+          motive?: string | null
           startup_id?: string | null
           thumbnail_url?: string | null
           title?: string

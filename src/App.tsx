@@ -17,6 +17,8 @@ import ProfilePage from "./pages/dashboard/Profile";
 import Startups from "./pages/dashboard/Startups";
 import Investors from "./pages/dashboard/Investors";
 import Pitches from "./pages/dashboard/Pitches";
+import MyPitches from "./pages/dashboard/MyPitches";
+import UploadPitch from "./pages/dashboard/UploadPitch";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<Feed />} />
               <Route path="pitches" element={<Pitches />} />
+              <Route path="pitches/my" element={<MyPitches />} />
+              <Route path="pitches/upload" element={<UploadPitch />} />
               <Route path="match" element={<Match />} />
               <Route path="messages" element={<Messages />} />
               <Route path="bookings" element={<Bookings />} />
