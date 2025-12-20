@@ -4,8 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Loader2, 
@@ -15,24 +14,11 @@ import {
   Volume2, 
   VolumeX,
   Play,
-  Pause,
-  Plus,
-  X,
-  Upload,
-  ChevronUp,
-  ChevronDown,
   Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   Sheet,
   SheetContent,
@@ -48,6 +34,7 @@ interface VideoPitch {
   description: string | null;
   video_url: string;
   thumbnail_url: string | null;
+  motive: string | null;
   views_count: number;
   likes_count: number;
   comments_count: number;
@@ -57,10 +44,6 @@ interface VideoPitch {
     avatar_url: string | null;
     title: string | null;
   };
-  startup?: {
-    name: string;
-    industry: string | null;
-  } | null;
   isLiked?: boolean;
 }
 
@@ -77,6 +60,15 @@ interface Comment {
 
 const ITEMS_PER_PAGE = 5;
 
+const motiveLabels: Record<string, { label: string; color: string }> = {
+  investment: { label: 'Raising Investment', color: 'bg-green-500/20 text-green-500' },
+  mentorship: { label: 'Seeking Mentorship', color: 'bg-blue-500/20 text-blue-500' },
+  cofounder: { label: 'Looking for Co-Founder', color: 'bg-purple-500/20 text-purple-500' },
+  investor: { label: 'Investor', color: 'bg-amber-500/20 text-amber-500' },
+  networking: { label: 'Networking', color: 'bg-pink-500/20 text-pink-500' },
+  general: { label: 'General', color: 'bg-muted text-muted-foreground' },
+};
+
 const Pitches = () => {
   const { user } = useAuth();
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
@@ -84,8 +76,6 @@ const Pitches = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(true);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -95,12 +85,6 @@ const Pitches = () => {
 
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const [newPitch, setNewPitch] = useState({
-    title: '',
-    description: '',
-    video: null as File | null
-  });
 
   const fetchPitches = useCallback(async (pageNum: number, append = false) => {
     const { data, error } = await supabase
@@ -119,7 +103,6 @@ const Pitches = () => {
         setHasMore(false);
       }
 
-      // Fetch user profiles and likes
       const pitchesWithDetails = await Promise.all(
         data.map(async (pitch) => {
           const { data: profile } = await supabase
@@ -157,7 +140,6 @@ const Pitches = () => {
   }, [fetchPitches]);
 
   useEffect(() => {
-    // Play current video, pause others
     Object.entries(videoRefs.current).forEach(([id, video]) => {
       if (video) {
         const pitch = pitches[currentIndex];
@@ -188,7 +170,6 @@ const Pitches = () => {
       setPlaying(true);
     }
 
-    // Load more when near bottom
     if (scrollTop + itemHeight * 2 >= container.scrollHeight && hasMore && !loading) {
       setPage(prev => {
         const newPage = prev + 1;
@@ -197,16 +178,6 @@ const Pitches = () => {
       });
     }
   }, [currentIndex, pitches.length, hasMore, loading, fetchPitches]);
-
-  const scrollToIndex = (index: number) => {
-    if (!containerRef.current || index < 0 || index >= pitches.length) return;
-    
-    const itemHeight = containerRef.current.clientHeight;
-    containerRef.current.scrollTo({
-      top: index * itemHeight,
-      behavior: 'smooth'
-    });
-  };
 
   const handleLike = async (pitch: VideoPitch) => {
     if (!user) return;
@@ -287,49 +258,6 @@ const Pitches = () => {
     }
   };
 
-  const handleUpload = async () => {
-    if (!user || !newPitch.video || !newPitch.title.trim()) return;
-
-    setUploading(true);
-
-    try {
-      const fileExt = newPitch.video.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('pitch-videos')
-        .upload(fileName, newPitch.video);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('pitch-videos')
-        .getPublicUrl(fileName);
-
-      const { error: insertError } = await supabase
-        .from('video_pitches')
-        .insert({
-          user_id: user.id,
-          title: newPitch.title.trim(),
-          description: newPitch.description || null,
-          video_url: publicUrl
-        });
-
-      if (insertError) throw insertError;
-
-      toast({ title: 'Success!', description: 'Your pitch video has been uploaded.' });
-      setUploadDialogOpen(false);
-      setNewPitch({ title: '', description: '', video: null });
-      setPage(0);
-      fetchPitches(0);
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({ title: 'Error', description: 'Failed to upload video', variant: 'destructive' });
-    }
-
-    setUploading(false);
-  };
-
   const handleShare = async (pitch: VideoPitch) => {
     try {
       await navigator.share({
@@ -353,110 +281,6 @@ const Pitches = () => {
 
   return (
     <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] relative bg-black">
-      {/* Upload Button */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            className="absolute top-4 right-4 z-20 rounded-full"
-            size="icon"
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upload Pitch Video</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Title *</Label>
-              <Input
-                value={newPitch.title}
-                onChange={(e) => setNewPitch({ ...newPitch, title: e.target.value })}
-                placeholder="Give your pitch a catchy title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={newPitch.description}
-                onChange={(e) => setNewPitch({ ...newPitch, description: e.target.value })}
-                placeholder="Tell viewers about your startup..."
-                className="resize-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Video *</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                {newPitch.video ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm truncate">{newPitch.video.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setNewPitch({ ...newPitch, video: null })}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer">
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      Click to upload video (MP4, WebM, MOV)
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">Max 100MB</p>
-                    <input
-                      type="file"
-                      accept="video/mp4,video/webm,video/quicktime"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setNewPitch({ ...newPitch, video: file });
-                      }}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
-            <Button
-              className="w-full"
-              onClick={handleUpload}
-              disabled={!newPitch.title.trim() || !newPitch.video || uploading}
-            >
-              {uploading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Upload className="h-4 w-4 mr-2" />
-              )}
-              Upload Pitch
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Navigation Arrows */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full bg-black/30 text-white hover:bg-black/50"
-          onClick={() => scrollToIndex(currentIndex - 1)}
-          disabled={currentIndex === 0}
-        >
-          <ChevronUp className="h-5 w-5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full bg-black/30 text-white hover:bg-black/50"
-          onClick={() => scrollToIndex(currentIndex + 1)}
-          disabled={currentIndex === pitches.length - 1}
-        >
-          <ChevronDown className="h-5 w-5" />
-        </Button>
-      </div>
-
       {/* Video Feed */}
       <div
         ref={containerRef}
@@ -481,6 +305,7 @@ const Pitches = () => {
               <video
                 ref={(el) => { videoRefs.current[pitch.id] = el; }}
                 src={pitch.video_url}
+                poster={pitch.thumbnail_url || undefined}
                 className="h-full w-full object-contain bg-black"
                 loop
                 muted={muted}
@@ -519,6 +344,11 @@ const Pitches = () => {
                     </div>
                   </div>
                   <h3 className="font-bold text-white text-lg mb-1">{pitch.title}</h3>
+                  {pitch.motive && motiveLabels[pitch.motive] && (
+                    <Badge className={cn("mb-2", motiveLabels[pitch.motive].color)}>
+                      {motiveLabels[pitch.motive].label}
+                    </Badge>
+                  )}
                   {pitch.description && (
                     <p className="text-white/80 text-sm line-clamp-2">{pitch.description}</p>
                   )}

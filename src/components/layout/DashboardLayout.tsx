@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Home, 
   MessageSquare, 
@@ -31,7 +32,11 @@ import {
   Mail,
   ChevronLeft,
   ChevronRight,
-  Video
+  Video,
+  ChevronDown,
+  Plus,
+  Play,
+  ListVideo
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,6 +47,7 @@ interface NavItem {
   icon: React.ElementType;
   label: string;
   path: string;
+  submenu?: { icon: React.ElementType; label: string; path: string }[];
 }
 
 interface Notification {
@@ -66,7 +72,16 @@ interface Message {
 
 const navItems: NavItem[] = [
   { icon: Home, label: 'Feed', path: '/dashboard' },
-  { icon: Video, label: 'Pitches', path: '/dashboard/pitches' },
+  { 
+    icon: Video, 
+    label: 'Pitches', 
+    path: '/dashboard/pitches',
+    submenu: [
+      { icon: Play, label: 'Browse Pitches', path: '/dashboard/pitches' },
+      { icon: ListVideo, label: 'My Pitches', path: '/dashboard/pitches/my' },
+      { icon: Plus, label: 'Upload Pitch', path: '/dashboard/pitches/upload' },
+    ]
+  },
   { icon: Heart, label: 'Match', path: '/dashboard/match' },
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
   { icon: Calendar, label: 'Bookings', path: '/dashboard/bookings' },
@@ -83,6 +98,7 @@ const DashboardLayout = () => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>('Pitches');
   const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null } | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -222,6 +238,13 @@ const DashboardLayout = () => {
     setUnreadNotifications(0);
   };
 
+  const isPathActive = (path: string, submenu?: NavItem['submenu']) => {
+    if (submenu) {
+      return submenu.some(item => location.pathname === item.path) || location.pathname.startsWith(path);
+    }
+    return location.pathname === path;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -256,19 +279,61 @@ const DashboardLayout = () => {
           {!sidebarCollapsed && <span className="text-lg font-bold">CampusLaunch</span>}
         </div>
 
-        <nav className={cn("flex-1 py-6 space-y-2", sidebarCollapsed ? "px-2" : "px-4")}>
+        <nav className={cn("flex-1 py-6 space-y-1 overflow-y-auto", sidebarCollapsed ? "px-2" : "px-3")}>
           {navItems.map((item) => (
-            sidebarCollapsed ? (
+            item.submenu && !sidebarCollapsed ? (
+              <Collapsible
+                key={item.path}
+                open={openSubmenu === item.label}
+                onOpenChange={(open) => setOpenSubmenu(open ? item.label : null)}
+              >
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant={isPathActive(item.path, item.submenu) ? 'secondary' : 'ghost'}
+                    className={cn(
+                      'w-full justify-between',
+                      isPathActive(item.path, item.submenu) && 'bg-secondary'
+                    )}
+                  >
+                    <span className="flex items-center gap-3">
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </span>
+                    <ChevronDown className={cn(
+                      "h-4 w-4 transition-transform",
+                      openSubmenu === item.label && "rotate-180"
+                    )} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4 mt-1 space-y-1">
+                  {item.submenu.map((subItem) => (
+                    <Button
+                      key={subItem.path}
+                      variant={location.pathname === subItem.path ? 'default' : 'ghost'}
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-3',
+                        location.pathname === subItem.path && 'bg-primary text-primary-foreground'
+                      )}
+                      onClick={() => navigate(subItem.path)}
+                    >
+                      <subItem.icon className="h-4 w-4" />
+                      {subItem.label}
+                    </Button>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            ) : sidebarCollapsed ? (
               <Tooltip key={item.path} delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={location.pathname === item.path ? 'default' : 'ghost'}
+                    variant={isPathActive(item.path, item.submenu) ? 'default' : 'ghost'}
                     size="icon"
                     className={cn(
                       'w-full',
-                      location.pathname === item.path && 'bg-primary text-primary-foreground'
+                      isPathActive(item.path, item.submenu) && 'bg-primary text-primary-foreground'
                     )}
-                    onClick={() => navigate(item.path)}
+                    onClick={() => navigate(item.submenu ? item.submenu[0].path : item.path)}
                   >
                     <item.icon className="h-5 w-5" />
                   </Button>
@@ -590,23 +655,67 @@ const DashboardLayout = () => {
                 </div>
               </div>
 
-              <nav className="flex-1 px-4 py-6 space-y-2">
+              <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
                 {navItems.map((item) => (
-                  <Button
-                    key={item.path}
-                    variant={location.pathname === item.path ? 'default' : 'ghost'}
-                    className={cn(
-                      'w-full justify-start gap-3',
-                      location.pathname === item.path && 'bg-primary text-primary-foreground'
-                    )}
-                    onClick={() => {
-                      navigate(item.path);
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
-                  </Button>
+                  item.submenu ? (
+                    <Collapsible
+                      key={item.path}
+                      open={openSubmenu === item.label}
+                      onOpenChange={(open) => setOpenSubmenu(open ? item.label : null)}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant={isPathActive(item.path, item.submenu) ? 'secondary' : 'ghost'}
+                          className="w-full justify-between"
+                        >
+                          <span className="flex items-center gap-3">
+                            <item.icon className="h-5 w-5" />
+                            {item.label}
+                          </span>
+                          <ChevronDown className={cn(
+                            "h-4 w-4 transition-transform",
+                            openSubmenu === item.label && "rotate-180"
+                          )} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pl-4 mt-1 space-y-1">
+                        {item.submenu.map((subItem) => (
+                          <Button
+                            key={subItem.path}
+                            variant={location.pathname === subItem.path ? 'default' : 'ghost'}
+                            size="sm"
+                            className={cn(
+                              'w-full justify-start gap-3',
+                              location.pathname === subItem.path && 'bg-primary text-primary-foreground'
+                            )}
+                            onClick={() => {
+                              navigate(subItem.path);
+                              setSidebarOpen(false);
+                            }}
+                          >
+                            <subItem.icon className="h-4 w-4" />
+                            {subItem.label}
+                          </Button>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : (
+                    <Button
+                      key={item.path}
+                      variant={location.pathname === item.path ? 'default' : 'ghost'}
+                      className={cn(
+                        'w-full justify-start gap-3',
+                        location.pathname === item.path && 'bg-primary text-primary-foreground'
+                      )}
+                      onClick={() => {
+                        navigate(item.path);
+                        setSidebarOpen(false);
+                      }}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </Button>
+                  )
                 ))}
               </nav>
 
@@ -662,7 +771,7 @@ const DashboardLayout = () => {
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
         <div className="flex items-center justify-around py-2">
-          {navItems.slice(0, 5).map((item) => (
+          {navItems.filter(item => !item.submenu).slice(0, 4).map((item) => (
             <Button
               key={item.path}
               variant="ghost"
@@ -677,6 +786,18 @@ const DashboardLayout = () => {
               <span className="text-[10px]">{item.label}</span>
             </Button>
           ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'flex-col gap-1 h-auto py-2 px-2',
+              location.pathname.startsWith('/dashboard/pitches') && 'text-primary'
+            )}
+            onClick={() => navigate('/dashboard/pitches')}
+          >
+            <Video className="h-5 w-5" />
+            <span className="text-[10px]">Pitches</span>
+          </Button>
         </div>
       </nav>
     </div>
