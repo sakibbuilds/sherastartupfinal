@@ -9,6 +9,8 @@ import { Send, Loader2, MessageSquare, ArrowLeft, Check, CheckCheck } from 'luci
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AvatarWithPresence, OnlineIndicator } from '@/components/common/OnlineIndicator';
+import { usePresence } from '@/hooks/usePresence';
 
 interface Conversation {
   id: string;
@@ -49,6 +51,7 @@ const Messages = () => {
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const { isOnline } = usePresence();
 
   useEffect(() => {
     if (user) {
@@ -332,12 +335,14 @@ const Messages = () => {
                       )}
                       onClick={() => setSelectedConversation(conv)}
                     >
-                      <Avatar>
-                        <AvatarImage src={other?.profiles?.avatar_url || ''} />
-                        <AvatarFallback>
-                          {other?.profiles?.full_name?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarWithPresence userId={other?.user_id || ''} indicatorSize="sm">
+                        <Avatar>
+                          <AvatarImage src={other?.profiles?.avatar_url || ''} />
+                          <AvatarFallback>
+                            {other?.profiles?.full_name?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      </AvatarWithPresence>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className={cn('font-medium truncate', hasUnread && 'font-bold')}>
@@ -390,16 +395,20 @@ const Messages = () => {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <Avatar>
-                <AvatarImage src={otherUser?.avatar_url || ''} />
-                <AvatarFallback>{otherUser?.full_name?.charAt(0) || 'U'}</AvatarFallback>
-              </Avatar>
+              <AvatarWithPresence userId={otherUser?.user_id || ''} indicatorSize="md">
+                <Avatar>
+                  <AvatarImage src={otherUser?.avatar_url || ''} />
+                  <AvatarFallback>{otherUser?.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+              </AvatarWithPresence>
               <div className="flex flex-col">
                 <p className="font-semibold">{otherUser?.full_name || 'User'}</p>
                 {isTyping ? (
                   <p className="text-xs text-primary animate-pulse">typing...</p>
+                ) : otherUser?.user_id && isOnline(otherUser.user_id) ? (
+                  <p className="text-xs text-mint">Online</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Online</p>
+                  <p className="text-xs text-muted-foreground">Offline</p>
                 )}
               </div>
             </div>

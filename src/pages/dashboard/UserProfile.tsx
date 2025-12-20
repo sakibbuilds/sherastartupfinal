@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import { AvatarWithPresence, OnlineIndicator } from '@/components/common/OnlineIndicator';
 
 interface MutualConnection {
   user_id: string;
@@ -335,16 +336,21 @@ const UserProfilePage = () => {
 
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-              <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
-                <AvatarImage src={profile.avatar_url || ''} />
-                <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
-                  {profile.full_name?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              <AvatarWithPresence userId={profile.user_id} indicatorSize="lg">
+                <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
+                  <AvatarImage src={profile.avatar_url || ''} />
+                  <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
+                    {profile.full_name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </AvatarWithPresence>
 
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                  <h1 className="text-2xl font-bold">{profile.full_name}</h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold">{profile.full_name}</h1>
+                    <OnlineIndicator userId={profile.user_id} size="lg" />
+                  </div>
                   {profile.user_type && (
                     <Badge variant="secondary" className="capitalize w-fit mx-auto sm:mx-0">
                       {profile.user_type}
