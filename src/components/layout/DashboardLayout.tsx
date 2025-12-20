@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Home, 
   MessageSquare, 
@@ -27,7 +28,10 @@ import {
   Building2,
   TrendingUp,
   Check,
-  Mail
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  Video
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,6 +66,7 @@ interface Message {
 
 const navItems: NavItem[] = [
   { icon: Home, label: 'Feed', path: '/dashboard' },
+  { icon: Video, label: 'Pitches', path: '/dashboard/pitches' },
   { icon: Heart, label: 'Match', path: '/dashboard/match' },
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
   { icon: Calendar, label: 'Bookings', path: '/dashboard/bookings' },
@@ -74,11 +79,19 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { user, signOut, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar-collapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null } | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [recentMessages, setRecentMessages] = useState<Message[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -224,48 +237,98 @@ const DashboardLayout = () => {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-border bg-card">
+      <aside 
+        className={cn(
+          "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 border-r border-border bg-card transition-all duration-300",
+          sidebarCollapsed ? "lg:w-16" : "lg:w-64"
+        )}
+      >
         <div 
-          className="flex items-center gap-2 px-6 py-4 border-b border-border cursor-pointer"
+          className={cn(
+            "flex items-center gap-2 px-4 py-4 border-b border-border cursor-pointer",
+            sidebarCollapsed && "justify-center px-2"
+          )}
           onClick={() => navigate('/dashboard')}
         >
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
             <Rocket className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold">CampusLaunch</span>
+          {!sidebarCollapsed && <span className="text-lg font-bold">CampusLaunch</span>}
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-2">
+        <nav className={cn("flex-1 py-6 space-y-2", sidebarCollapsed ? "px-2" : "px-4")}>
           {navItems.map((item) => (
-            <Button
-              key={item.path}
-              variant={location.pathname === item.path ? 'default' : 'ghost'}
-              className={cn(
-                'w-full justify-start gap-3',
-                location.pathname === item.path && 'bg-primary text-primary-foreground'
-              )}
-              onClick={() => navigate(item.path)}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Button>
+            sidebarCollapsed ? (
+              <Tooltip key={item.path} delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={location.pathname === item.path ? 'default' : 'ghost'}
+                    size="icon"
+                    className={cn(
+                      'w-full',
+                      location.pathname === item.path && 'bg-primary text-primary-foreground'
+                    )}
+                    onClick={() => navigate(item.path)}
+                  >
+                    <item.icon className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                key={item.path}
+                variant={location.pathname === item.path ? 'default' : 'ghost'}
+                className={cn(
+                  'w-full justify-start gap-3',
+                  location.pathname === item.path && 'bg-primary text-primary-foreground'
+                )}
+                onClick={() => navigate(item.path)}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </Button>
+            )
           ))}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        {/* Collapse Toggle */}
+        <div className="p-2 border-t border-border">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <>
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Collapse
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className={cn("p-4 border-t border-border", sidebarCollapsed && "p-2")}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-3">
+              <Button variant="ghost" className={cn("w-full gap-3", sidebarCollapsed ? "justify-center p-0" : "justify-start")}>
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={profile?.avatar_url || ''} />
                   <AvatarFallback>{profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col items-start text-left">
-                  <span className="truncate text-sm font-medium">{profile?.full_name || 'User'}</span>
-                  {profile?.title && (
-                    <span className="text-xs text-muted-foreground truncate">{profile.title}</span>
-                  )}
-                </div>
+                {!sidebarCollapsed && (
+                  <div className="flex flex-col items-start text-left min-w-0">
+                    <span className="truncate text-sm font-medium">{profile?.full_name || 'User'}</span>
+                    {profile?.title && (
+                      <span className="text-xs text-muted-foreground truncate">{profile.title}</span>
+                    )}
+                  </div>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover">
@@ -288,7 +351,12 @@ const DashboardLayout = () => {
       </aside>
 
       {/* Desktop Header (right of sidebar) */}
-      <header className="hidden lg:flex items-center justify-end h-16 px-6 border-b border-border bg-card fixed top-0 left-64 right-0 z-40">
+      <header 
+        className={cn(
+          "hidden lg:flex items-center justify-end h-16 px-6 border-b border-border bg-card fixed top-0 right-0 z-40 transition-all duration-300",
+          sidebarCollapsed ? "left-16" : "left-64"
+        )}
+      >
         <div className="flex items-center gap-2">
           {/* Notifications */}
           <DropdownMenu>
@@ -509,7 +577,6 @@ const DashboardLayout = () => {
                 </Button>
               </div>
 
-              {/* Mobile profile summary */}
               <div className="px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
@@ -581,7 +648,12 @@ const DashboardLayout = () => {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64">
+      <main 
+        className={cn(
+          "flex-1 transition-all duration-300",
+          sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
+        )}
+      >
         <div className="pt-16 lg:pt-16">
           <Outlet />
         </div>
