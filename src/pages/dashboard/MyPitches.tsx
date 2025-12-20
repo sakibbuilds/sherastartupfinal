@@ -136,7 +136,7 @@ const MyPitches = () => {
               transition={{ delay: index * 0.05 }}
             >
               <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="relative aspect-[9/16] max-h-[200px] bg-muted">
+                <div className="relative aspect-video bg-muted">
                   {pitch.thumbnail_url ? (
                     <img
                       src={pitch.thumbnail_url}
