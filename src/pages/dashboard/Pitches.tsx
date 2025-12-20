@@ -343,12 +343,14 @@ const Pitches = () => {
                       <p className="text-xs text-white/70">{pitch.user?.title || 'Founder'}</p>
                     </div>
                   </div>
-                  <h3 className="font-bold text-white text-lg mb-1">{pitch.title}</h3>
-                  {pitch.motive && motiveLabels[pitch.motive] && (
-                    <Badge className={cn("mb-2", motiveLabels[pitch.motive].color)}>
-                      {motiveLabels[pitch.motive].label}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h3 className="font-bold text-white text-lg">{pitch.title}</h3>
+                    {pitch.motive && motiveLabels[pitch.motive] && (
+                      <Badge className={cn(motiveLabels[pitch.motive].color)}>
+                        {motiveLabels[pitch.motive].label}
+                      </Badge>
+                    )}
+                  </div>
                   {pitch.description && (
                     <p className="text-white/80 text-sm line-clamp-2">{pitch.description}</p>
                   )}
