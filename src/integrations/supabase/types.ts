@@ -488,6 +488,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          established_at: string | null
           founder_id: string
           funding_goal: number | null
           funding_raised: number | null
@@ -506,6 +507,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          established_at?: string | null
           founder_id: string
           funding_goal?: number | null
           funding_raised?: number | null
@@ -524,6 +526,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          established_at?: string | null
           founder_id?: string
           funding_goal?: number | null
           funding_raised?: number | null

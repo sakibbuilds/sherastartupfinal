@@ -11,12 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import { 
   Loader2, 
   Rocket, 
   Users, 
-  TrendingUp,
   ArrowLeft,
   Edit,
   Video,
@@ -33,13 +31,14 @@ import {
   Camera,
   Save,
   X,
-  MapPin,
   Linkedin,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  Upload
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/hooks/use-toast';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { AvatarCropper } from '@/components/common/AvatarCropper';
 
 interface Startup {
@@ -57,6 +56,7 @@ interface Startup {
   looking_for: string[] | null;
   founder_id: string;
   created_at: string;
+  established_at: string | null;
 }
 
 interface TeamMember {
@@ -79,17 +79,19 @@ interface VideoPitch {
   created_at: string;
 }
 
-const stages = [
-  { value: 'idea', label: 'Idea Stage', description: 'Concept phase, validating the idea' },
-  { value: 'mvp', label: 'MVP', description: 'Minimum viable product built' },
-  { value: 'early', label: 'Early Traction', description: 'First customers acquired' },
-  { value: 'growth', label: 'Growth', description: 'Scaling operations' },
-  { value: 'scaling', label: 'Scaling', description: 'Rapid expansion phase' }
+const defaultStages = [
+  { value: 'idea', label: 'Idea Stage', color: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
+  { value: 'mvp', label: 'MVP', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  { value: 'early', label: 'Early Traction', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+  { value: 'growth', label: 'Growth', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+  { value: 'scaling', label: 'Scaling', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+  { value: 'profitable', label: 'Profitable', color: 'bg-green-500/20 text-green-400 border-green-500/30' }
 ];
 
-const industries = [
+const defaultIndustries = [
   'Technology', 'Healthcare', 'Fintech', 'E-commerce', 'Education', 
-  'SaaS', 'AI/ML', 'Sustainability', 'Consumer', 'B2B', 'Media', 'Other'
+  'SaaS', 'AI/ML', 'Sustainability', 'Consumer', 'B2B', 'Media', 'Gaming',
+  'Real Estate', 'Agriculture', 'Transportation', 'Food & Beverage'
 ];
 
 const lookingForOptions = [
@@ -121,12 +123,17 @@ const StartupDetails = () => {
     description: '',
     website: '',
     industry: '',
+    customIndustry: '',
     stage: '',
+    customStage: '',
     funding_goal: '',
     funding_raised: '',
     team_size: '',
-    looking_for: [] as string[]
+    looking_for: [] as string[],
+    established_at: ''
   });
+  const [showCustomIndustry, setShowCustomIndustry] = useState(false);
+  const [showCustomStage, setShowCustomStage] = useState(false);
   
   // Logo upload
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -156,18 +163,29 @@ const StartupDetails = () => {
         return;
       }
 
-      setStartup(startupData);
+      setStartup(startupData as Startup);
+      
+      // Check if industry/stage are custom values
+      const isCustomIndustry = startupData.industry && !defaultIndustries.includes(startupData.industry);
+      const isCustomStage = startupData.stage && !defaultStages.find(s => s.value === startupData.stage);
+      
+      setShowCustomIndustry(isCustomIndustry);
+      setShowCustomStage(isCustomStage);
+      
       setEditForm({
         name: startupData.name || '',
         tagline: startupData.tagline || '',
         description: startupData.description || '',
         website: startupData.website || '',
-        industry: startupData.industry || '',
-        stage: startupData.stage || '',
+        industry: isCustomIndustry ? 'custom' : (startupData.industry || ''),
+        customIndustry: isCustomIndustry ? startupData.industry : '',
+        stage: isCustomStage ? 'custom' : (startupData.stage || ''),
+        customStage: isCustomStage ? startupData.stage : '',
         funding_goal: startupData.funding_goal?.toString() || '',
         funding_raised: startupData.funding_raised?.toString() || '',
         team_size: startupData.team_size?.toString() || '1',
-        looking_for: startupData.looking_for || []
+        looking_for: startupData.looking_for || [],
+        established_at: startupData.established_at || ''
       });
 
       // Fetch founder profile
@@ -278,6 +296,9 @@ const StartupDetails = () => {
     if (!startup) return;
     setSaving(true);
 
+    const finalIndustry = editForm.industry === 'custom' ? editForm.customIndustry : editForm.industry;
+    const finalStage = editForm.stage === 'custom' ? editForm.customStage : editForm.stage;
+
     const { error } = await supabase
       .from('startups')
       .update({
@@ -285,12 +306,13 @@ const StartupDetails = () => {
         tagline: editForm.tagline || null,
         description: editForm.description || null,
         website: editForm.website || null,
-        industry: editForm.industry || null,
-        stage: editForm.stage || null,
+        industry: finalIndustry || null,
+        stage: finalStage || null,
         funding_goal: editForm.funding_goal ? parseFloat(editForm.funding_goal) : null,
         funding_raised: editForm.funding_raised ? parseFloat(editForm.funding_raised) : null,
         team_size: parseInt(editForm.team_size) || 1,
-        looking_for: editForm.looking_for.length > 0 ? editForm.looking_for : null
+        looking_for: editForm.looking_for.length > 0 ? editForm.looking_for : null,
+        established_at: editForm.established_at || null
       })
       .eq('id', startup.id);
 
@@ -375,20 +397,18 @@ const StartupDetails = () => {
     navigate(`/dashboard/pitches?video=${pitchId}`);
   };
 
-  const getStageColor = (stage: string | null) => {
-    switch (stage) {
-      case 'idea': return 'bg-muted text-muted-foreground';
-      case 'mvp': return 'bg-sky/20 text-sky';
-      case 'early': return 'bg-mint/20 text-mint';
-      case 'growth': return 'bg-pink/20 text-pink';
-      case 'scaling': return 'bg-primary/20 text-primary';
-      default: return 'bg-muted';
-    }
+  const getStageInfo = (stage: string | null) => {
+    const found = defaultStages.find(s => s.value === stage);
+    if (found) return found;
+    // Custom stage - use a unique color
+    return { value: stage, label: stage, color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' };
   };
 
   const fundingProgress = startup?.funding_goal 
     ? Math.min(((startup.funding_raised || 0) / startup.funding_goal) * 100, 100)
     : 0;
+
+  const displayDate = startup?.established_at || startup?.created_at;
 
   if (loading) {
     return (
@@ -429,7 +449,7 @@ const StartupDetails = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        {/* Hero Header - Crunchbase Style */}
+        {/* Hero Header */}
         <Card className="mb-6 overflow-hidden">
           <div className="bg-gradient-to-r from-primary/10 via-sky/10 to-primary/5 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
@@ -470,8 +490,8 @@ const StartupDetails = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                   <h1 className="text-2xl sm:text-3xl font-bold">{startup.name}</h1>
                   {startup.stage && (
-                    <Badge className={getStageColor(startup.stage)}>
-                      {stages.find(s => s.value === startup.stage)?.label || startup.stage}
+                    <Badge className={`${getStageInfo(startup.stage).color} border`}>
+                      {getStageInfo(startup.stage).label}
                     </Badge>
                   )}
                 </div>
@@ -487,18 +507,29 @@ const StartupDetails = () => {
                       {startup.industry}
                     </Badge>
                   )}
-                  <Badge variant="outline" className="gap-1">
-                    <Calendar className="h-3 w-3" />
-                    Founded {format(new Date(startup.created_at), 'MMM yyyy')}
-                  </Badge>
+                  {displayDate && (
+                    <Badge variant="outline" className="gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Est. {format(new Date(displayDate), 'MMM yyyy')}
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="flex gap-2 justify-center sm:justify-start flex-wrap">
                   {isOwner ? (
-                    <Button onClick={() => setIsEditing(!isEditing)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      {isEditing ? 'Cancel Edit' : 'Edit Details'}
-                    </Button>
+                    <>
+                      <Button onClick={() => setIsEditing(!isEditing)} variant={isEditing ? "outline" : "default"}>
+                        {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
+                        {isEditing ? 'Cancel' : 'Edit Details'}
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => navigate('/dashboard/upload-pitch')}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Pitch
+                      </Button>
+                    </>
                   ) : (
                     <Button 
                       variant={isFollowing ? "outline" : "default"}
@@ -569,17 +600,46 @@ const StartupDetails = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Industry</Label>
+                  <Label>Established Date</Label>
+                  <Input 
+                    type="date"
+                    value={editForm.established_at}
+                    onChange={(e) => setEditForm(f => ({ ...f, established_at: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Industry with custom option */}
+              <div className="space-y-2">
+                <Label>Industry / Category</Label>
+                <div className="flex gap-2">
                   <select 
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                    value={editForm.industry}
-                    onChange={(e) => setEditForm(f => ({ ...f, industry: e.target.value }))}
+                    className="flex-1 h-10 px-3 rounded-md border border-input bg-background"
+                    value={showCustomIndustry ? 'custom' : editForm.industry}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setShowCustomIndustry(true);
+                        setEditForm(f => ({ ...f, industry: 'custom' }));
+                      } else {
+                        setShowCustomIndustry(false);
+                        setEditForm(f => ({ ...f, industry: e.target.value, customIndustry: '' }));
+                      }
+                    }}
                   >
                     <option value="">Select industry</option>
-                    {industries.map(i => (
+                    {defaultIndustries.map(i => (
                       <option key={i} value={i}>{i}</option>
                     ))}
+                    <option value="custom">+ Add Custom</option>
                   </select>
+                  {showCustomIndustry && (
+                    <Input 
+                      value={editForm.customIndustry}
+                      onChange={(e) => setEditForm(f => ({ ...f, customIndustry: e.target.value }))}
+                      placeholder="Enter custom category"
+                      className="flex-1"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -611,20 +671,62 @@ const StartupDetails = () => {
                     placeholder="https://yourwebsite.com"
                   />
                 </div>
+                
+                {/* Stage with custom option */}
                 <div className="space-y-2">
                   <Label>Stage</Label>
-                  <select 
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                    value={editForm.stage}
-                    onChange={(e) => setEditForm(f => ({ ...f, stage: e.target.value }))}
-                  >
-                    <option value="">Select stage</option>
-                    {stages.map(s => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select 
+                      className="flex-1 h-10 px-3 rounded-md border border-input bg-background"
+                      value={showCustomStage ? 'custom' : editForm.stage}
+                      onChange={(e) => {
+                        if (e.target.value === 'custom') {
+                          setShowCustomStage(true);
+                          setEditForm(f => ({ ...f, stage: 'custom' }));
+                        } else {
+                          setShowCustomStage(false);
+                          setEditForm(f => ({ ...f, stage: e.target.value, customStage: '' }));
+                        }
+                      }}
+                    >
+                      <option value="">Select stage</option>
+                      {defaultStages.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                      <option value="custom">+ Add Custom</option>
+                    </select>
+                    {showCustomStage && (
+                      <Input 
+                        value={editForm.customStage}
+                        onChange={(e) => setEditForm(f => ({ ...f, customStage: e.target.value }))}
+                        placeholder="Custom stage"
+                        className="flex-1"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Stage Preview */}
+              {(editForm.stage || editForm.customStage) && (
+                <div className="space-y-2">
+                  <Label>Stage Preview</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {defaultStages.map(s => (
+                      <Badge 
+                        key={s.value}
+                        className={`${s.color} border cursor-pointer ${editForm.stage === s.value && !showCustomStage ? 'ring-2 ring-primary' : 'opacity-60'}`}
+                        onClick={() => {
+                          setShowCustomStage(false);
+                          setEditForm(f => ({ ...f, stage: s.value, customStage: '' }));
+                        }}
+                      >
+                        {s.label}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
@@ -806,12 +908,12 @@ const StartupDetails = () => {
                 <CardContent className="py-12 text-center">
                   <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                   <h3 className="font-semibold mb-2">No pitches yet</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This startup hasn't uploaded any pitches yet.
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {isOwner ? "Upload your first pitch to showcase your startup!" : "This startup hasn't uploaded any pitches yet."}
                   </p>
                   {isOwner && (
-                    <Button className="mt-4" onClick={() => navigate('/dashboard/upload-pitch')}>
-                      <Video className="h-4 w-4 mr-2" />
+                    <Button onClick={() => navigate('/dashboard/upload-pitch')}>
+                      <Upload className="h-4 w-4 mr-2" />
                       Upload First Pitch
                     </Button>
                   )}
@@ -860,6 +962,23 @@ const StartupDetails = () => {
                     </div>
                   </motion.div>
                 ))}
+                
+                {/* Add Pitch Card for Owner */}
+                {isOwner && (
+                  <motion.div
+                    className="cursor-pointer group"
+                    onClick={() => navigate('/dashboard/upload-pitch')}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors flex items-center justify-center">
+                      <div className="text-center">
+                        <Plus className="h-8 w-8 mx-auto mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Add Pitch</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -882,7 +1001,7 @@ const StartupDetails = () => {
                         <p className="font-semibold">{founder.full_name}</p>
                         <p className="text-sm text-muted-foreground">{founder.title || 'Founder'}</p>
                       </div>
-                      <Badge>Founder</Badge>
+                      <Badge className="bg-primary/20 text-primary border-primary/30 border">Founder</Badge>
                     </div>
                   </CardContent>
                 </Card>
