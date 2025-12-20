@@ -112,22 +112,35 @@ const Bookings = () => {
 
     const { data } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        mentor:profiles!bookings_mentor_id_fkey (
-          full_name,
-          avatar_url,
-          title
-        ),
-        mentee:profiles!bookings_mentee_id_fkey (
-          full_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .or(`mentor_id.eq.${user.id},mentee_id.eq.${user.id}`)
       .order('scheduled_at', { ascending: true });
 
-    setBookings((data as Booking[]) || []);
+    if (data) {
+      // Fetch profiles separately for each booking
+      const bookingsWithProfiles = await Promise.all(
+        data.map(async (booking) => {
+          const { data: mentorProfile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url, title')
+            .eq('user_id', booking.mentor_id)
+            .maybeSingle();
+
+          const { data: menteeProfile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', booking.mentee_id)
+            .maybeSingle();
+
+          return {
+            ...booking,
+            mentor: mentorProfile || { full_name: 'Unknown', avatar_url: null, title: null },
+            mentee: menteeProfile || { full_name: 'Unknown', avatar_url: null }
+          };
+        })
+      );
+      setBookings(bookingsWithProfiles as Booking[]);
+    }
   };
 
   const handleBookSession = async () => {

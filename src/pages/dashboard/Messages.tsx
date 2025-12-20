@@ -121,16 +121,26 @@ const Messages = () => {
       // Fetch participants for each conversation
       const conversationsWithParticipants = await Promise.all(
         conversationsData.map(async (conv) => {
-          const { data: participants } = await supabase
+          const { data: participantsData } = await supabase
             .from('conversation_participants')
-            .select(`
-              user_id,
-              profiles!conversation_participants_user_id_fkey (
-                full_name,
-                avatar_url
-              )
-            `)
+            .select('user_id')
             .eq('conversation_id', conv.id);
+
+          // Fetch profiles for each participant separately
+          const participantsWithProfiles = await Promise.all(
+            (participantsData || []).map(async (p) => {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, avatar_url')
+                .eq('user_id', p.user_id)
+                .maybeSingle();
+              
+              return {
+                user_id: p.user_id,
+                profiles: profile || { full_name: 'Unknown', avatar_url: null }
+              };
+            })
+          );
 
           // Fetch last message
           const { data: lastMsg } = await supabase
@@ -139,11 +149,11 @@ const Messages = () => {
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           return {
             ...conv,
-            participants: participants || [],
+            participants: participantsWithProfiles,
             lastMessage: lastMsg || undefined
           };
         })
