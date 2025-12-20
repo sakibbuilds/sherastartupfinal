@@ -34,7 +34,8 @@ import {
   Linkedin,
   ExternalLink,
   Plus,
-  Upload
+  Upload,
+  GraduationCap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/hooks/use-toast';
@@ -105,7 +106,8 @@ const StartupDetails = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [startup, setStartup] = useState<Startup | null>(null);
-  const [founder, setFounder] = useState<{ full_name: string; avatar_url: string | null; user_id: string; title: string | null; linkedin_url: string | null } | null>(null);
+  const [founder, setFounder] = useState<{ full_name: string; avatar_url: string | null; user_id: string; title: string | null; linkedin_url: string | null; university_id: string | null } | null>(null);
+  const [founderUniversity, setFounderUniversity] = useState<{ id: string; name: string } | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
   const [followersCount, setFollowersCount] = useState(0);
@@ -191,12 +193,25 @@ const StartupDetails = () => {
       // Fetch founder profile
       const { data: founderData } = await supabase
         .from('profiles')
-        .select('full_name, avatar_url, user_id, title, linkedin_url')
+        .select('full_name, avatar_url, user_id, title, linkedin_url, university_id')
         .eq('user_id', startupData.founder_id)
         .single();
 
       if (founderData) {
         setFounder(founderData);
+        
+        // Fetch founder's university if they have one
+        if (founderData.university_id) {
+          const { data: uniData } = await supabase
+            .from('universities')
+            .select('id, name')
+            .eq('id', founderData.university_id)
+            .maybeSingle();
+          
+          if (uniData) {
+            setFounderUniversity(uniData);
+          }
+        }
       }
 
       // Fetch team members
@@ -451,7 +466,18 @@ const StartupDetails = () => {
       >
         {/* Hero Header */}
         <Card className="mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-primary/10 via-sky/10 to-primary/5 p-6 sm:p-8">
+          <div className="bg-gradient-to-r from-primary/10 via-sky/10 to-primary/5 p-6 sm:p-8 relative">
+            {/* University Badge - Top Right */}
+            {founderUniversity && (
+              <Badge 
+                variant="secondary" 
+                className="absolute top-4 right-4 gap-1.5 bg-background/80 backdrop-blur-sm shadow-sm"
+              >
+                <GraduationCap className="h-3.5 w-3.5" />
+                {founderUniversity.name}
+              </Badge>
+            )}
+            
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
               {/* Logo with upload option for owner */}
               <div className="relative group">
