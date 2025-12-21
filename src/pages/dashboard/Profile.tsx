@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -25,9 +26,11 @@ interface Profile {
   hourly_rate: number | null;
   is_available: boolean;
   linkedin_url: string | null;
+  user_type: string | null;
 }
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);

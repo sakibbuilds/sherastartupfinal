@@ -61,12 +61,6 @@ const userTypes = [
     icon: TrendingUp,
     title: 'Investor',
     description: 'Looking to invest in promising university startups'
-  },
-  {
-    id: 'mentor',
-    icon: Users,
-    title: 'Mentor',
-    description: 'Sharing expertise and guiding the next generation'
   }
 ];
 

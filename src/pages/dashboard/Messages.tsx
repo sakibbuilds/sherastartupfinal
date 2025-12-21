@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,8 @@ interface Message {
 
 const Messages = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const conversationIdParam = searchParams.get('conversationId');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -203,6 +206,68 @@ const Messages = () => {
 
     setLoading(false);
   };
+
+  // Handle URL query parameter for conversation selection
+  useEffect(() => {
+    const loadSelectedConversation = async () => {
+      if (!conversationIdParam) return;
+      
+      // Try to find in existing list
+      const existing = conversations.find(c => c.id === conversationIdParam);
+      if (existing) {
+        setSelectedConversation(existing);
+        return;
+      }
+
+      // If not found in list (e.g. new conversation), fetch it directly
+      if (user) {
+        // Fallback to standard fetch
+        const { data: convData } = await supabase
+          .from('conversations')
+          .select('id, updated_at')
+          .eq('id', conversationIdParam)
+          .maybeSingle();
+
+        if (convData) {
+          // Fetch participants
+          const { data: participantsData } = await supabase
+            .from('conversation_participants')
+            .select('user_id')
+            .eq('conversation_id', convData.id);
+
+          const participantsWithProfiles = await Promise.all(
+            (participantsData || []).map(async (p) => {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, avatar_url')
+                .eq('user_id', p.user_id)
+                .maybeSingle();
+              
+              return {
+                user_id: p.user_id,
+                profiles: profile || { full_name: 'Unknown', avatar_url: null }
+              };
+            })
+          );
+
+          const newConv: Conversation = {
+            ...convData,
+            participants: participantsWithProfiles,
+            lastMessage: undefined
+          };
+
+          setSelectedConversation(newConv);
+          // Optionally add to list if not present
+          setConversations(prev => {
+            if (prev.find(c => c.id === newConv.id)) return prev;
+            return [newConv, ...prev];
+          });
+        }
+      }
+    };
+
+    loadSelectedConversation();
+  }, [conversationIdParam, conversations, user]);
 
   const fetchMessages = async (conversationId: string) => {
     const { data } = await supabase

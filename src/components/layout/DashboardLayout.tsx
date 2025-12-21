@@ -12,7 +12,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   Home, 
   MessageSquare, 
@@ -21,7 +30,7 @@ import {
   Bell, 
   Settings, 
   LogOut, 
-  Menu, 
+  AlignLeft, 
   X,
   Rocket,
   User,
@@ -37,7 +46,8 @@ import {
   Plus,
   Play,
   ListVideo,
-  Users
+  Users,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -90,6 +100,7 @@ const navItems: NavItem[] = [
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
   { icon: Calendar, label: 'Bookings', path: '/dashboard/bookings' },
   { icon: Building2, label: 'Startups', path: '/dashboard/startups' },
+  { icon: Users, label: 'Founders', path: '/dashboard/founders' },
   { icon: TrendingUp, label: 'Investors', path: '/dashboard/investors' },
 ];
 
@@ -103,12 +114,27 @@ const DashboardLayout = () => {
     return saved ? JSON.parse(saved) : false;
   });
   const [openSubmenu, setOpenSubmenu] = useState<string | null>('Pitches');
-  const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null; user_type: string | null } | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [recentMessages, setRecentMessages] = useState<Message[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const { onlineCount } = usePresence();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      checkAdminRole();
+    }
+  }, [user]);
+
+  const checkAdminRole = async () => {
+    const { data } = await supabase.rpc('has_role', {
+      _role: 'admin',
+      _user_id: user?.id
+    });
+    setIsAdmin(!!data);
+  };
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(sidebarCollapsed));
@@ -125,7 +151,7 @@ const DashboardLayout = () => {
       const fetchProfile = async () => {
         const { data } = await supabase
           .from('profiles')
-          .select('full_name, avatar_url, title, onboarding_completed')
+          .select('full_name, avatar_url, title, onboarding_completed, user_type')
           .eq('user_id', user.id)
           .single();
         
@@ -299,6 +325,9 @@ const DashboardLayout = () => {
         case 'profile':
           navigate(`/dashboard/profile/${notification.reference_id}`);
           break;
+        case 'post':
+          navigate(`/dashboard/post/${notification.reference_id}`);
+          break;
         default:
           if (notification.type === 'comment' || notification.type === 'like') {
             navigate(`/dashboard/pitches?video=${notification.reference_id}`);
@@ -353,6 +382,15 @@ const DashboardLayout = () => {
     return null;
   }
 
+  const displayedNavItems = [...navItems];
+  if (profile?.user_type === 'admin') {
+    displayedNavItems.push({
+      icon: Shield,
+      label: 'Admin',
+      path: '/dashboard/admin/mentorships',
+    });
+  }
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
@@ -376,49 +414,63 @@ const DashboardLayout = () => {
         </div>
 
         <nav className={cn("flex-1 py-6 space-y-1 overflow-y-auto", sidebarCollapsed ? "px-2" : "px-3")}>
-          {navItems.map((item) => (
-            item.submenu && !sidebarCollapsed ? (
-              <Collapsible
-                key={item.path}
-                open={openSubmenu === item.label}
-                onOpenChange={(open) => setOpenSubmenu(open ? item.label : null)}
-              >
-                <CollapsibleTrigger asChild>
+          {displayedNavItems.map((item) => (
+            item.submenu ? (
+              <HoverCard key={item.path} openDelay={0} closeDelay={100}>
+                <HoverCardTrigger asChild>
                   <Button
                     variant={isPathActive(item.path, item.submenu) ? 'secondary' : 'ghost'}
                     className={cn(
-                      'w-full justify-between',
+                      'w-full',
+                      sidebarCollapsed ? 'justify-center px-2' : 'justify-between',
                       isPathActive(item.path, item.submenu) && 'bg-secondary'
                     )}
+                    onClick={() => navigate(item.path)}
                   >
-                    <span className="flex items-center gap-3">
+                    {sidebarCollapsed ? (
                       <item.icon className="h-5 w-5" />
-                      {item.label}
-                    </span>
-                    <ChevronDown className={cn(
-                      "h-4 w-4 transition-transform",
-                      openSubmenu === item.label && "rotate-180"
-                    )} />
+                    ) : (
+                      <>
+                        <span className="flex items-center gap-3">
+                          <item.icon className="h-5 w-5" />
+                          {item.label}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </>
+                    )}
                   </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pl-4 mt-1 space-y-1">
-                  {item.submenu.map((subItem) => (
-                    <Button
-                      key={subItem.path}
-                      variant={location.pathname === subItem.path ? 'default' : 'ghost'}
-                      size="sm"
-                      className={cn(
-                        'w-full justify-start gap-3',
-                        location.pathname === subItem.path && 'bg-primary text-primary-foreground'
-                      )}
-                      onClick={() => navigate(subItem.path)}
-                    >
-                      <subItem.icon className="h-4 w-4" />
-                      {subItem.label}
-                    </Button>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
+                </HoverCardTrigger>
+                <HoverCardContent 
+                  side="right" 
+                  align="start" 
+                  className="w-56 p-2" 
+                  sideOffset={sidebarCollapsed ? 20 : 10}
+                >
+                  <div className="space-y-1">
+                    <div className="px-2 py-1.5 text-sm font-semibold text-foreground/70 border-b border-border mb-1">
+                      {item.label}
+                    </div>
+                    {item.submenu.map((subItem) => (
+                      <Button
+                        key={subItem.path}
+                        variant={location.pathname === subItem.path ? 'default' : 'ghost'}
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-3',
+                          location.pathname === subItem.path && 'bg-primary text-primary-foreground'
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(subItem.path);
+                        }}
+                      >
+                        <subItem.icon className="h-4 w-4" />
+                        {subItem.label}
+                      </Button>
+                    ))}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             ) : sidebarCollapsed ? (
               <Tooltip key={item.path} delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -453,6 +505,72 @@ const DashboardLayout = () => {
               </Button>
             )
           ))}
+
+          {isAdmin && (
+            <div className="pt-4 mt-4 border-t border-border">
+              {!sidebarCollapsed && <p className="mb-2 px-4 text-xs font-semibold text-muted-foreground tracking-wider">ADMIN</p>}
+              <HoverCard openDelay={0} closeDelay={100}>
+                <HoverCardTrigger asChild>
+                  <Button
+                    variant={location.pathname.startsWith('/dashboard/admin') ? 'secondary' : 'ghost'}
+                    className={cn(
+                      'w-full',
+                      sidebarCollapsed ? 'justify-center px-2' : 'justify-between',
+                      location.pathname.startsWith('/dashboard/admin') && 'bg-secondary'
+                    )}
+                  >
+                    {sidebarCollapsed ? (
+                      <Shield className="h-5 w-5" />
+                    ) : (
+                      <>
+                        <span className="flex items-center gap-3">
+                          <Shield className="h-5 w-5" />
+                          Admin Panel
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </>
+                    )}
+                  </Button>
+                </HoverCardTrigger>
+                <HoverCardContent 
+                  side="right" 
+                  align="start" 
+                  className="w-56 p-2" 
+                  sideOffset={sidebarCollapsed ? 20 : 10}
+                >
+                  <div className="space-y-1">
+                    <div className="px-2 py-1.5 text-sm font-semibold text-foreground/70 border-b border-border mb-1">
+                      Admin Panel
+                    </div>
+                    <Button
+                      variant={location.pathname === '/dashboard/admin/mentorships' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start gap-3"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/dashboard/admin/mentorships');
+                      }}
+                    >
+                      <Users className="h-4 w-4" />
+                      Mentorships
+                    </Button>
+                    <Button
+                      variant={location.pathname === '/dashboard/admin/advertisements' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start gap-3"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/dashboard/admin/advertisements');
+                      }}
+                    >
+                      <ListVideo className="h-4 w-4" />
+                      Advertisements
+                    </Button>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            </div>
+          )}
         </nav>
 
         {/* Collapse Toggle */}
@@ -699,7 +817,7 @@ const DashboardLayout = () => {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
+            <AlignLeft className="h-6 w-6" />
           </Button>
           <div className="flex items-center gap-2">
             <Rocket className="h-5 w-5 text-primary" />
@@ -875,7 +993,7 @@ const DashboardLayout = () => {
           sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
         )}
       >
-        <div className="pt-16 lg:pt-16">
+        <div className="pt-16 lg:pt-16 pb-20 lg:pb-8">
           <Outlet />
         </div>
       </main>

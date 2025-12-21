@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -77,6 +78,7 @@ interface Stats {
 const UserProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [startup, setStartup] = useState<Startup | null>(null);
@@ -85,6 +87,8 @@ const UserProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isRequestSent, setIsRequestSent] = useState(false);
+  const [hasIncomingRequest, setHasIncomingRequest] = useState(false);
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [mutualConnections, setMutualConnections] = useState<MutualConnection[]>([]);
 
@@ -103,14 +107,50 @@ const UserProfilePage = () => {
   const checkConnection = async () => {
     if (!user || !userId) return;
     
-    const { data } = await supabase
+    // Reset states
+    setIsConnected(false);
+    setIsRequestSent(false);
+    setHasIncomingRequest(false);
+
+    // Check for accepted connection
+    const { data: acceptedMatch } = await supabase
       .from('matches')
       .select('id, status')
       .or(`and(user_id.eq.${user.id},matched_user_id.eq.${userId}),and(user_id.eq.${userId},matched_user_id.eq.${user.id})`)
       .eq('status', 'accepted')
       .maybeSingle();
     
-    setIsConnected(!!data);
+    if (acceptedMatch) {
+      setIsConnected(true);
+      return;
+    }
+
+    // Check for pending request sent by current user
+    const { data: sentRequest } = await supabase
+      .from('matches')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('matched_user_id', userId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (sentRequest) {
+      setIsRequestSent(true);
+      return;
+    }
+
+    // Check for pending request received from other user
+    const { data: receivedRequest } = await supabase
+      .from('matches')
+      .select('id, status')
+      .eq('user_id', userId)
+      .eq('matched_user_id', user.id)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (receivedRequest) {
+      setHasIncomingRequest(true);
+    }
   };
 
   const fetchMutualConnections = async () => {
@@ -160,18 +200,160 @@ const UserProfilePage = () => {
     
     setConnectionLoading(true);
     try {
-      await supabase
+      // Check if match already exists
+      const { data: existingMatch } = await supabase
+        .from('matches')
+        .select('id, status')
+        .or(`and(user_id.eq.${user.id},matched_user_id.eq.${userId}),and(user_id.eq.${userId},matched_user_id.eq.${user.id})`)
+        .maybeSingle();
+
+      if (existingMatch) {
+        if (existingMatch.status === 'accepted') {
+          setIsConnected(true);
+          toast({ title: "Info", description: "You are already connected." });
+          return;
+        }
+        if (existingMatch.status === 'pending') {
+          setIsRequestSent(true);
+          toast({ title: "Info", description: "Connection request already sent." });
+          return;
+        }
+        // If rejected, we inform the user they cannot reconnect (due to RLS limitations)
+        if (existingMatch.status === 'rejected') {
+          toast({ 
+            title: "Cannot Connect", 
+            description: "Connection request was previously rejected.",
+            variant: "destructive" 
+          });
+          return;
+        }
+      }
+
+      // Create match request
+      const { error: matchError } = await supabase
         .from('matches')
         .insert({
           user_id: user.id,
           matched_user_id: userId,
           status: 'pending'
         });
+
+      if (matchError) {
+        // Handle unique constraint violation (race condition)
+        if (matchError.code === '23505') {
+           setIsRequestSent(true);
+           toast({ title: "Info", description: "Connection request already sent." });
+           return;
+        }
+
+        console.error('Error sending connection request:', matchError);
+        toast({
+          title: "Error",
+          description: `Failed to send connection request: ${matchError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create notification for the other user
+      if (profile) {
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            type: 'connection_request',
+            title: 'New Connection Request',
+            message: `${user.user_metadata.full_name || 'Someone'} wants to connect with you.`,
+            reference_id: user.id,
+            reference_type: 'profile'
+          });
+
+        if (notificationError) {
+          console.error('Error creating notification:', notificationError);
+        }
+      }
       
-      // For demo, auto-accept
-      setIsConnected(true);
+      setIsRequestSent(true);
+      toast({
+        title: "Success",
+        description: "Connection request sent!",
+      });
     } catch (error) {
       console.error('Error connecting:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
+
+  const handleAcceptConnection = async () => {
+    if (!user || !userId) return;
+    
+    setConnectionLoading(true);
+    try {
+      // Find the pending match request
+      const { data: matchRequest, error: fetchError } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('matched_user_id', user.id)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error finding connection request:', fetchError);
+        return;
+      }
+
+      if (matchRequest) {
+        // Update status to accepted
+        const { error: updateError } = await supabase
+          .from('matches')
+          .update({ status: 'accepted' })
+          .eq('id', matchRequest.id);
+
+        if (updateError) {
+          console.error('Error accepting connection:', updateError);
+          toast({
+            title: "Error",
+            description: "Failed to accept connection request.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Notify the requester
+        if (profile) {
+           await supabase
+            .from('notifications')
+            .insert({
+              user_id: userId,
+              type: 'connection_accepted',
+              title: 'Connection Accepted',
+              message: `${user.user_metadata.full_name || 'Someone'} accepted your connection request.`,
+              reference_id: user.id,
+              reference_type: 'profile'
+            });
+        }
+
+        setIsConnected(true);
+        setHasIncomingRequest(false);
+        toast({
+          title: "Success",
+          description: "Connection request accepted!",
+        });
+      }
+    } catch (error) {
+      console.error('Error accepting connection:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setConnectionLoading(false);
     }
@@ -242,46 +424,65 @@ const UserProfilePage = () => {
 
   const handleMessage = async () => {
     if (!user || !userId) return;
-    
-    // Check if conversation exists
-    const { data: existingParticipations } = await supabase
+
+    // Check if conversation exists using a more efficient query
+    const { data: myConversations } = await supabase
       .from('conversation_participants')
       .select('conversation_id')
       .eq('user_id', user.id);
 
-    if (existingParticipations) {
-      for (const participation of existingParticipations) {
-        const { data: otherParticipant } = await supabase
-          .from('conversation_participants')
-          .select('user_id')
-          .eq('conversation_id', participation.conversation_id)
-          .eq('user_id', userId)
-          .single();
+    if (myConversations && myConversations.length > 0) {
+      const conversationIds = myConversations.map(c => c.conversation_id);
+      
+      const { data: sharedConversation } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', userId)
+        .in('conversation_id', conversationIds)
+        .maybeSingle();
 
-        if (otherParticipant) {
-          navigate('/dashboard/messages');
-          return;
-        }
+      if (sharedConversation) {
+        navigate(`/dashboard/messages?conversationId=${sharedConversation.conversation_id}`);
+        return;
       }
     }
 
-    // Create new conversation
-    const { data: newConversation } = await supabase
+    // Create new conversation with client-side UUID to bypass RLS select restriction
+    const newConversationId = crypto.randomUUID();
+    
+    const { error: createError } = await supabase
       .from('conversations')
-      .insert({})
-      .select()
-      .single();
+      .insert({ id: newConversationId });
 
-    if (newConversation) {
-      await supabase
-        .from('conversation_participants')
-        .insert([
-          { conversation_id: newConversation.id, user_id: user.id },
-          { conversation_id: newConversation.id, user_id: userId }
-        ]);
-
-      navigate('/dashboard/messages');
+    if (createError) {
+      console.error('Error creating conversation:', createError);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    // Add participants
+    const { error: participantError } = await supabase
+      .from('conversation_participants')
+      .insert([
+        { conversation_id: newConversationId, user_id: user.id },
+        { conversation_id: newConversationId, user_id: userId }
+      ]);
+
+    if (participantError) {
+      console.error('Error adding participants:', participantError);
+      toast({
+        title: "Error",
+        description: "Failed to add participants.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    navigate(`/dashboard/messages?conversationId=${newConversationId}`);
   };
 
   if (loading) {
@@ -323,21 +524,11 @@ const UserProfilePage = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         {/* Profile Header */}
-        <Card className="mb-6 relative overflow-hidden">
-          {/* University Badge - Top Right - More Visible */}
-          {profile.university && (
-            <div className="absolute top-4 right-4 z-10">
-              <Badge className="bg-primary text-primary-foreground shadow-md flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium">
-                <GraduationCap className="h-4 w-4" />
-                {profile.university}
-              </Badge>
-            </div>
-          )}
-
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+        <Card className="mb-6 overflow-hidden">
+          <CardContent className="p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start gap-6">
               <AvatarWithPresence userId={profile.user_id} indicatorSize="lg">
-                <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
+                <Avatar className="h-24 w-24 sm:h-32 sm:w-32 shadow-md">
                   <AvatarImage src={profile.avatar_url || ''} />
                   <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
                     {profile.full_name?.charAt(0) || 'U'}
@@ -345,14 +536,23 @@ const UserProfilePage = () => {
                 </Avatar>
               </AvatarWithPresence>
 
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-bold">{profile.full_name}</h1>
-                    <OnlineIndicator userId={profile.user_id} size="lg" />
+              <div className="flex-1 w-full text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-2xl sm:text-3xl font-bold">{profile.full_name}</h1>
+                      <OnlineIndicator userId={profile.user_id} size="lg" />
+                    </div>
+                    {profile.university && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <GraduationCap className="h-4 w-4" />
+                        <span className="text-sm font-medium">{profile.university}</span>
+                      </div>
+                    )}
                   </div>
+                  
                   {profile.user_type && (
-                    <Badge variant="secondary" className="capitalize w-fit mx-auto sm:mx-0">
+                    <Badge variant="secondary" className="capitalize w-fit px-3 py-1">
                       {profile.user_type}
                     </Badge>
                   )}
@@ -360,7 +560,7 @@ const UserProfilePage = () => {
 
                 {startup && (
                   <div 
-                    className="flex items-center justify-center sm:justify-start gap-2 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-2 mb-3 cursor-pointer hover:opacity-80 transition-opacity w-fit"
                     onClick={() => navigate(`/dashboard/startups/${startup.id}`)}
                   >
                     <Badge variant="outline" className="text-primary border-primary">
@@ -373,22 +573,22 @@ const UserProfilePage = () => {
                 )}
 
                 {profile.title && (
-                  <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2 mb-3">
+                  <p className="text-muted-foreground flex items-center gap-2 mb-3">
                     <Briefcase className="h-4 w-4" />
                     {profile.title}
                   </p>
                 )}
 
                 {profile.bio && (
-                  <p className="text-sm text-muted-foreground mb-4 max-w-lg">
+                  <p className="text-sm text-muted-foreground mb-6 max-w-2xl leading-relaxed">
                     {profile.bio}
                   </p>
                 )}
 
                 {profile.expertise && profile.expertise.length > 0 && (
-                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start mb-4">
+                  <div className="flex flex-wrap gap-2 mb-6">
                     {profile.expertise.map((skill) => (
-                      <Badge key={skill} variant="outline">
+                      <Badge key={skill} variant="secondary" className="bg-secondary/50 hover:bg-secondary/70">
                         {skill}
                       </Badge>
                     ))}
@@ -396,7 +596,7 @@ const UserProfilePage = () => {
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 justify-center sm:justify-start">
+                <div className="flex flex-wrap gap-3">
                   {isOwnProfile ? (
                     <Button onClick={() => navigate('/dashboard/profile')}>
                       <Edit className="h-4 w-4 mr-2" />
@@ -408,6 +608,24 @@ const UserProfilePage = () => {
                         <Button variant="secondary" disabled>
                           <UserCheck className="h-4 w-4 mr-2" />
                           Connected
+                        </Button>
+                      ) : isRequestSent ? (
+                        <Button variant="secondary" disabled>
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Request Sent
+                        </Button>
+                      ) : hasIncomingRequest ? (
+                        <Button 
+                          variant="default" 
+                          onClick={handleAcceptConnection}
+                          disabled={connectionLoading}
+                        >
+                          {connectionLoading ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <UserCheck className="h-4 w-4 mr-2" />
+                          )}
+                          Accept Request
                         </Button>
                       ) : (
                         <Button 

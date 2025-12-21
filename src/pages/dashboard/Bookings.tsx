@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -74,9 +75,11 @@ const timeSlots = [
 
 const Bookings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userType, setUserType] = useState<string | null>(null);
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>('');
@@ -88,8 +91,22 @@ const Bookings = () => {
     fetchMentors();
     if (user) {
       fetchBookings();
+      fetchUserProfile();
     }
   }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (data) {
+      setUserType(data.user_type);
+    }
+  };
 
   const fetchMentors = async () => {
     // For now, fetch all profiles with expertise (simulating mentors)
@@ -222,7 +239,14 @@ const Bookings = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 pb-20 lg:pb-6">
-      <h1 className="text-2xl font-bold mb-6">Mentor Bookings</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Mentor Bookings</h1>
+        {userType !== 'mentor' && (
+          <Button onClick={() => navigate('/dashboard/become-mentor')}>
+            Become a Mentor
+          </Button>
+        )}
+      </div>
 
       <Tabs defaultValue="mentors" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">

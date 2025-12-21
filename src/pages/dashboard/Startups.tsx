@@ -118,6 +118,8 @@ const Startups = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   // Collapsible states
   const [openSections, setOpenSections] = useState({
@@ -134,6 +136,11 @@ const Startups = () => {
       setFilterUniversity(universityParam);
     }
   }, [searchParams]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStage, filterIndustry, filterUniversity, filterInvestment]);
 
   // Update URL when university filter changes
   const handleUniversityFilter = (universityId: string) => {
@@ -302,6 +309,12 @@ const Startups = () => {
     return matchesSearch && matchesStage && matchesIndustry && matchesUniversity && matchesInvestment;
   });
 
+  const totalPages = Math.ceil(filteredStartups.length / ITEMS_PER_PAGE);
+  const paginatedStartups = filteredStartups.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const getStageColor = (stage: string | null) => {
     const found = stages.find(s => s.value === stage);
     return found?.color || 'bg-muted';
@@ -328,6 +341,37 @@ const Startups = () => {
 
   const FilterSidebar = () => (
     <div className="space-y-4">
+      <div className="flex items-center justify-between md:hidden mb-4">
+        <h3 className="font-semibold">Filters</h3>
+        <Button variant="ghost" size="sm" onClick={() => setShowFilters(false)}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search startups..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 bg-card"
+        />
+      </div>
+
+      {hasActiveFilters && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={clearFilters}
+          className="w-full text-muted-foreground hover:text-foreground"
+        >
+          <X className="mr-2 h-3 w-3" />
+          Clear Filters
+        </Button>
+      )}
+
+      {hasActiveFilters && <div className="h-px bg-border" />}
+
       {/* University Filter */}
       <Collapsible 
         open={openSections.university} 
@@ -366,6 +410,8 @@ const Startups = () => {
           </ScrollArea>
         </CollapsibleContent>
       </Collapsible>
+
+      <div className="h-px bg-border" />
 
       {/* Category/Industry Filter */}
       <Collapsible 
@@ -406,6 +452,8 @@ const Startups = () => {
         </CollapsibleContent>
       </Collapsible>
 
+      <div className="h-px bg-border" />
+
       {/* Stage Filter */}
       <Collapsible 
         open={openSections.stage} 
@@ -441,6 +489,8 @@ const Startups = () => {
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      <div className="h-px bg-border" />
 
       {/* Investment Filter */}
       <Collapsible 
@@ -479,7 +529,7 @@ const Startups = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 lg:pb-6">
+    <div className="px-6 md:px-10 py-8 space-y-8 pb-10">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Startups</h1>
@@ -487,42 +537,30 @@ const Startups = () => {
             Discover and connect with university startups
             <span className="ml-2 text-sm">({startups.length} total)</span>
           </p>
-          {/* Institution counts summary */}
-          <div className="flex flex-wrap gap-2 mt-2">
-            {universities
-              .filter(uni => counts.universityCounts[uni.id])
-              .slice(0, 5)
-              .map(uni => (
-                <button
-                  key={uni.id}
-                  onClick={() => handleUniversityFilter(uni.id)}
-                  className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full transition-colors ${
-                    filterUniversity === uni.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-                  }`}
-                >
-                  <GraduationCap className="h-3 w-3" />
-                  {uni.name.length > 20 ? uni.name.slice(0, 20) + '...' : uni.name}
-                  <span className="font-semibold">{counts.universityCounts[uni.id]}</span>
-                </button>
-              ))}
-            {universities.filter(uni => counts.universityCounts[uni.id]).length > 5 && (
-              <span className="text-xs text-muted-foreground self-center">
-                +{universities.filter(uni => counts.universityCounts[uni.id]).length - 5} more
-              </span>
-            )}
-          </div>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Startup
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="md:hidden"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {hasActiveFilters && (
+              <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center">
+                {[filterStage, filterIndustry, filterUniversity, filterInvestment].filter(Boolean).length}
+              </Badge>
+            )}
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Startup
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Create Your Startup</DialogTitle>
             </DialogHeader>
@@ -615,38 +653,7 @@ const Startups = () => {
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Search and Mobile Filter Toggle */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search startups..."
-            className="pl-10"
-          />
-        </div>
-        <Button 
-          variant="outline" 
-          className="lg:hidden"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-          {hasActiveFilters && (
-            <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center">
-              {[filterStage, filterIndustry, filterUniversity, filterInvestment].filter(Boolean).length}
-            </Badge>
-          )}
-        </Button>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            <X className="h-4 w-4 mr-1" />
-            Clear
-          </Button>
-        )}
-      </div>
+    </div>
 
       {/* Active Filters Display */}
       {hasActiveFilters && (
@@ -682,56 +689,13 @@ const Startups = () => {
         </div>
       )}
 
-      <div className="flex gap-6">
-        {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0">
-          <Card className="sticky top-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Filter Startups
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FilterSidebar />
-            </CardContent>
-          </Card>
-        </aside>
-
-        {/* Mobile Sidebar Sheet */}
-        <AnimatePresence>
-          {showFilters && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black z-40 lg:hidden"
-                onClick={() => setShowFilters(false)}
-              />
-              <motion.div
-                initial={{ x: '-100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '-100%' }}
-                transition={{ type: 'tween', duration: 0.3 }}
-                className="fixed left-0 top-0 h-full w-80 bg-background z-50 lg:hidden overflow-y-auto"
-              >
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      Filter Startups
-                    </h2>
-                    <Button variant="ghost" size="icon" onClick={() => setShowFilters(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <FilterSidebar />
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Filters Sidebar */}
+        <div 
+          className={`w-full md:w-72 shrink-0 space-y-6 ${showFilters ? 'block' : 'hidden md:block'}`}
+        >
+          <FilterSidebar />
+        </div>
 
         {/* Main Content */}
         <div className="flex-1">
@@ -757,105 +721,134 @@ const Startups = () => {
               )}
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredStartups.map((startup, index) => (
-                <motion.div
-                  key={startup.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card 
-                    className="h-full hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/dashboard/startups/${startup.id}`)}
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {paginatedStartups.map((startup, index) => (
+                  <motion.div
+                    key={startup.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-sky/20 rounded-xl flex items-center justify-center">
-                            {startup.logo_url ? (
-                              <img src={startup.logo_url} alt={startup.name} className="w-full h-full object-cover rounded-xl" />
-                            ) : (
-                              <Rocket className="h-6 w-6 text-primary" />
-                            )}
+                    <Card 
+                      className="h-full hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/dashboard/startups/${startup.id}`)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-sky/20 rounded-xl flex items-center justify-center">
+                              {startup.logo_url ? (
+                                <img src={startup.logo_url} alt={startup.name} className="w-full h-full object-cover rounded-xl" />
+                              ) : (
+                                <Rocket className="h-6 w-6 text-primary" />
+                              )}
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg">{startup.name}</CardTitle>
+                              {startup.industry && (
+                                <p className="text-sm text-muted-foreground">{startup.industry}</p>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <CardTitle className="text-lg">{startup.name}</CardTitle>
-                            {startup.industry && (
-                              <p className="text-sm text-muted-foreground">{startup.industry}</p>
-                            )}
-                          </div>
-                        </div>
-                        {startup.stage && (
-                          <Badge className={getStageColor(startup.stage)}>
-                            {stages.find(s => s.value === startup.stage)?.label || startup.stage}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {startup.tagline && (
-                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                          {startup.tagline}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {startup.team_size} member{startup.team_size !== 1 ? 's' : ''}
-                        </span>
-                        {startup.funding_goal && (
-                          <span className="flex items-center gap-1">
-                            <TrendingUp className="h-4 w-4" />
-                            ${startup.funding_goal.toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-
-                      {startup.founder && (
-                        <div className="flex items-center gap-2 pt-3 border-t">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={startup.founder.avatar_url || ''} />
-                            <AvatarFallback className="text-xs">
-                              {startup.founder.full_name?.charAt(0) || 'F'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{startup.founder.full_name}</p>
-                            {startup.founder.university && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUniversityFilter(startup.founder!.university!.id);
-                                }}
-                                className="text-xs text-primary hover:underline truncate flex items-center gap-1"
-                              >
-                                <GraduationCap className="h-3 w-3" />
-                                {startup.founder.university.name}
-                              </button>
-                            )}
-                          </div>
-                          {startup.website && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(startup.website!, '_blank');
-                              }}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
+                          {startup.stage && (
+                            <Badge className={getStageColor(startup.stage)}>
+                              {stages.find(s => s.value === startup.stage)?.label || startup.stage}
+                            </Badge>
                           )}
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+                      </CardHeader>
+                      <CardContent>
+                        {startup.tagline && (
+                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                            {startup.tagline}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {startup.team_size} member{startup.team_size !== 1 ? 's' : ''}
+                          </span>
+                          {startup.funding_goal && (
+                            <span className="flex items-center gap-1">
+                              <TrendingUp className="h-4 w-4" />
+                              ${startup.funding_goal.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+
+                        {startup.founder && (
+                          <div className="flex items-center gap-2 pt-3 border-t">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={startup.founder.avatar_url || ''} />
+                              <AvatarFallback className="text-xs">
+                                {startup.founder.full_name?.charAt(0) || 'F'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{startup.founder.full_name}</p>
+                              {startup.founder.university && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUniversityFilter(startup.founder!.university!.id);
+                                  }}
+                                  className="text-xs text-primary hover:underline truncate flex items-center gap-1"
+                                >
+                                  <GraduationCap className="h-3 w-3" />
+                                  {startup.founder.university.name}
+                                </button>
+                              )}
+                            </div>
+                            {startup.website && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(startup.website!, '_blank');
+                                }}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-8">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronDown className="h-4 w-4 rotate-90" />
+                    Previous
+                  </Button>
+                  <span className="text-sm font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronDown className="h-4 w-4 -rotate-90" />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
