@@ -213,11 +213,11 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
           .filter(userId => userId !== user.id) // Don't notify self
           .map(userId => ({
             user_id: userId,
-            actor_id: user.id,
             type: 'mention',
-            resource_id: data.id,
-            resource_type: 'post',
-            content: 'mentioned you in a post'
+            title: 'New Mention',
+            message: 'mentioned you in a post',
+            reference_id: data.id,
+            reference_type: 'post'
           }));
         
         if (notifications.length > 0) {

@@ -323,6 +323,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          category: string | null
           comments_count: number | null
           content: string
           created_at: string
@@ -330,10 +331,12 @@ export type Database = {
           likes_count: number | null
           media_type: string | null
           media_url: string | null
+          media_urls: string[] | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          category?: string | null
           comments_count?: number | null
           content: string
           created_at?: string
@@ -341,10 +344,12 @@ export type Database = {
           likes_count?: number | null
           media_type?: string | null
           media_url?: string | null
+          media_urls?: string[] | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          category?: string | null
           comments_count?: number | null
           content?: string
           created_at?: string
@@ -352,6 +357,7 @@ export type Database = {
           likes_count?: number | null
           media_type?: string | null
           media_url?: string | null
+          media_urls?: string[] | null
           updated_at?: string
           user_id?: string
         }

@@ -27,6 +27,7 @@ import Founders from "./pages/dashboard/Founders";
 import BecomeMentor from "./pages/dashboard/BecomeMentor";
 import AdminMentorships from "./pages/dashboard/AdminMentorships";
 import AdminAdvertisements from "./pages/dashboard/AdminAdvertisements";
+import Search from "./pages/dashboard/Search";
 
 const queryClient = new QueryClient();
 
