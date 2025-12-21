@@ -14,6 +14,7 @@ interface Comment {
   id: string;
   content: string;
   created_at: string;
+  user_id: string;
   profiles: {
     full_name: string;
     avatar_url: string | null;
@@ -181,11 +182,11 @@ const PostDetails = () => {
       if (post.user_id !== user.id) {
         await supabase.from('notifications').insert({
           user_id: post.user_id,
-          actor_id: user.id,
           type: 'comment',
-          resource_id: post.id,
-          resource_type: 'post',
-          content: 'commented on your post'
+          title: 'New Comment',
+          message: 'commented on your post',
+          reference_id: post.id,
+          reference_type: 'post'
         });
       }
     }
