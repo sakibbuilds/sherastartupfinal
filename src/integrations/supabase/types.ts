@@ -55,6 +55,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_id: string | null
           post_id: string
           user_id: string
         }
@@ -62,6 +63,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           post_id: string
           user_id: string
         }
@@ -69,10 +71,18 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           post_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "comments_post_id_fkey"
             columns: ["post_id"]
@@ -129,6 +139,27 @@ export type Database = {
         }
         Relationships: []
       }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string
@@ -182,6 +213,8 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachment_type: string | null
+          attachment_url: string | null
           content: string
           conversation_id: string
           created_at: string
@@ -190,6 +223,8 @@ export type Database = {
           sender_id: string
         }
         Insert: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           content: string
           conversation_id: string
           created_at?: string
@@ -198,6 +233,8 @@ export type Database = {
           sender_id: string
         }
         Update: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           content?: string
           conversation_id?: string
           created_at?: string
@@ -376,6 +413,7 @@ export type Database = {
           investment_range_max: number | null
           investment_range_min: number | null
           is_available: boolean | null
+          is_mentor: boolean | null
           linkedin_url: string | null
           onboarding_completed: boolean | null
           title: string | null
@@ -384,6 +422,7 @@ export type Database = {
           updated_at: string
           user_id: string
           user_type: string | null
+          verified: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -397,6 +436,7 @@ export type Database = {
           investment_range_max?: number | null
           investment_range_min?: number | null
           is_available?: boolean | null
+          is_mentor?: boolean | null
           linkedin_url?: string | null
           onboarding_completed?: boolean | null
           title?: string | null
@@ -405,6 +445,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           user_type?: string | null
+          verified?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -418,6 +459,7 @@ export type Database = {
           investment_range_max?: number | null
           investment_range_min?: number | null
           is_available?: boolean | null
+          is_mentor?: boolean | null
           linkedin_url?: string | null
           onboarding_completed?: boolean | null
           title?: string | null
@@ -426,6 +468,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_type?: string | null
+          verified?: boolean | null
         }
         Relationships: []
       }
@@ -508,6 +551,7 @@ export type Database = {
           tagline: string | null
           team_size: number | null
           updated_at: string
+          verified: boolean | null
           website: string | null
         }
         Insert: {
@@ -527,6 +571,7 @@ export type Database = {
           tagline?: string | null
           team_size?: number | null
           updated_at?: string
+          verified?: boolean | null
           website?: string | null
         }
         Update: {
@@ -546,6 +591,7 @@ export type Database = {
           tagline?: string | null
           team_size?: number | null
           updated_at?: string
+          verified?: boolean | null
           website?: string | null
         }
         Relationships: []
@@ -594,6 +640,42 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      verification_requests: {
+        Row: {
+          created_at: string
+          document_url: string | null
+          full_name: string | null
+          id: string
+          linkedin_url: string | null
+          reason: string | null
+          rejection_reason: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_url?: string | null
+          full_name?: string | null
+          id?: string
+          linkedin_url?: string | null
+          reason?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_url?: string | null
+          full_name?: string | null
+          id?: string
+          linkedin_url?: string | null
+          reason?: string | null
+          rejection_reason?: string | null
+          status?: string | null
           user_id?: string
         }
         Relationships: []
@@ -762,6 +844,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_demo_users: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
