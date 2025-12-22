@@ -543,9 +543,9 @@ const UserProfilePage = () => {
       }
     }
 
-    // Try RPC function first (best for RLS)
-    const { data: rpcData, error: rpcError } = await supabase
-      .rpc('create_new_conversation', { other_user_id: userId });
+    // Try RPC function first (best for RLS) - but it might not exist in the database
+    // Using 'as any' to bypass TypeScript check since the function may or may not be created
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('create_new_conversation', { other_user_id: userId });
 
     if (!rpcError && rpcData) {
       navigate(`/dashboard/messages?conversationId=${rpcData}`);
