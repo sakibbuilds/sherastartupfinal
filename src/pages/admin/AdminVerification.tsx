@@ -103,9 +103,9 @@ const AdminVerification = () => {
 
     try {
       // 1. Update the main entity (profile or startup)
-      const { error } = await supabase
-        .from(table)
-        .update({ verified: true } as any)
+      const { error } = await (supabase
+        .from(table) as any)
+        .update({ verified: true })
         .eq(idField, id);
 
       if (error) throw error;

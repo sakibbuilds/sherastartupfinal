@@ -390,7 +390,12 @@ const Messages = () => {
          // Simplified: Just replace for now, but if we are in the middle of sending, handleSend handles the state.
          // The issue is if fetchMessages runs WHILE an optimistic message is there.
          
-         return data;
+         return data.map(m => ({
+           ...m,
+           attachment_type: m.attachment_type as 'image' | 'file' | undefined,
+           attachment_url: m.attachment_url ?? undefined,
+           is_read: m.is_read ?? false
+         }));
       });
     } else {
       setMessages([]);
@@ -464,7 +469,12 @@ const Messages = () => {
     
     if (sentMessage) {
       // Replace optimistic message with real one
-      setMessages(prev => prev.map(m => m.id === optimisticMessage.id ? sentMessage : m));
+      setMessages(prev => prev.map(m => m.id === optimisticMessage.id ? {
+        ...sentMessage,
+        attachment_type: sentMessage.attachment_type as 'image' | 'file' | undefined,
+        attachment_url: sentMessage.attachment_url ?? undefined,
+        is_read: sentMessage.is_read ?? false
+      } : m));
       
       // Update conversation timestamp
       await supabase
@@ -841,7 +851,7 @@ const Messages = () => {
                   className="flex-1 bg-white/5 border-white/10 focus:border-primary min-h-[40px] max-h-32"
                 />
                 <Button 
-                  onClick={handleSend} 
+                  onClick={() => handleSend()} 
                   disabled={!newMessage.trim() || sending}
                   size="icon"
                   className="h-10 w-10 rounded-full shrink-0"
