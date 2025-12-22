@@ -137,7 +137,7 @@ const Auth = () => {
             <p className="text-muted-foreground">Reset your password</p>
           </div>
 
-          <Card className="border-border/50 shadow-lg">
+          <Card className="glass-card shadow-lg">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl text-center">Forgot Password</CardTitle>
               <CardDescription className="text-center">
@@ -202,7 +202,7 @@ const Auth = () => {
           <p className="text-muted-foreground">Where university startups take flight</p>
         </div>
 
-        <Card className="border-border/50 shadow-lg">
+        <Card className="glass-card shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome</CardTitle>
             <CardDescription className="text-center">

@@ -61,7 +61,7 @@ export const UniversityStartups = ({ displayMode = 'list' }: UniversityStartupsP
         </h3>
         <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 scrollbar-hide">
           {startups.map((startup) => (
-            <Card key={startup.id} className="min-w-[200px] w-[200px] flex-shrink-0 cursor-pointer hover:border-primary transition-colors" onClick={() => navigate(`/dashboard/startups/${startup.id}`)}>
+            <Card key={startup.id} className="min-w-[200px] w-[200px] flex-shrink-0 cursor-pointer glass-card hover:-translate-y-1" onClick={() => navigate(`/dashboard/startups/${startup.id}`)}>
               <CardContent className="p-3 flex items-center gap-3">
                 <Avatar className="h-10 w-10 rounded-lg">
                   <AvatarImage src={startup.logo_url || ''} />
@@ -84,7 +84,7 @@ export const UniversityStartups = ({ displayMode = 'list' }: UniversityStartupsP
   }
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Building2 className="h-4 w-4" />

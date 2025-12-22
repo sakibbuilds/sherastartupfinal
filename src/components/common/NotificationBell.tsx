@@ -60,9 +60,9 @@ export function NotificationBell() {
             onClick={() => setIsOpen(false)}
           />
           
-          <div className="absolute right-0 mt-2 w-96 bg-card rounded-xl border border-border shadow-elevated-lg z-50 animate-fade-in overflow-hidden">
+          <div className="absolute right-0 mt-2 w-96 glass-card z-50 animate-fade-in overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <h3 className="font-semibold">Notifications</h3>
               {unreadCount > 0 && (
                 <button
@@ -96,7 +96,7 @@ export function NotificationBell() {
                       onClick={() => handleClick(notification)}
                       className={cn(
                         "group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors",
-                        "hover:bg-secondary/50",
+                        "hover:bg-white/5",
                         !notification.is_read && "bg-primary/5"
                       )}
                     >

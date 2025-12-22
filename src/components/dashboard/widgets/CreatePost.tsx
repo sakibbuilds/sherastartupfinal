@@ -249,7 +249,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
   };
 
   return (
-    <Card className="mb-4 relative overflow-visible">
+    <Card className="mb-6 relative overflow-visible glass-card">
       <CardContent className="p-4">
         <div className="flex gap-3">
           <Avatar className="hidden sm:block h-10 w-10">
@@ -262,7 +262,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
               placeholder="Share your startup journey..."
               value={content}
               onChange={handleContentChange}
-              className="resize-none min-h-[80px] border-none focus-visible:ring-0 px-0 text-base w-full whitespace-pre-wrap break-words"
+              className="resize-none min-h-[120px] sm:min-h-[100px] border-none focus-visible:ring-0 p-3 sm:p-0 text-base sm:text-lg w-full whitespace-pre-wrap break-words bg-transparent"
             />
             
             {showMentions && mentionResults.length > 0 && (
@@ -306,8 +306,8 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
               </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t">
-              <div className="flex items-center gap-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t">
+              <div className="flex items-center gap-1 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 scrollbar-hide -mx-2 px-2 sm:mx-0 sm:px-0">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -316,14 +316,14 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
                   multiple
                   onChange={handleImageSelect}
                 />
-                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => fileInputRef.current?.click()}>
+                <Button variant="ghost" size="sm" className="text-muted-foreground shrink-0" onClick={() => fileInputRef.current?.click()}>
                   <ImageIcon className="h-4 w-4 mr-2" />
                   Media
                 </Button>
                 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground shrink-0">
                       <AtSign className="h-4 w-4 mr-2" />
                       Mention
                     </Button>
@@ -336,13 +336,13 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
                   </PopoverContent>
                 </Popover>
 
-                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => insertText('#')}>
+                <Button variant="ghost" size="sm" className="text-muted-foreground shrink-0" onClick={() => insertText('#')}>
                   <Hash className="h-4 w-4 mr-2" />
                   Hashtag
                 </Button>
 
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="w-[130px] h-8 border-none shadow-none bg-muted/50">
+                  <SelectTrigger className="w-[130px] h-8 border-none shadow-none bg-muted/50 shrink-0">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -359,7 +359,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
               <Button 
                 onClick={handleCreatePost} 
                 disabled={(!content.trim() && images.length === 0) || posting}
-                className="px-6"
+                className="px-6 w-full sm:w-auto"
               >
                 {posting ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

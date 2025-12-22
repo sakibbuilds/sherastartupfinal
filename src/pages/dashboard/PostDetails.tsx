@@ -10,16 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { PostCard, Post } from '@/components/dashboard/PostCard';
 import { toast } from '@/hooks/use-toast';
 
-interface Comment {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  profiles: {
-    full_name: string;
-    avatar_url: string | null;
-  };
-}
+import PostCommentTree, { Comment } from '@/components/dashboard/PostCommentTree';
 
 const PostDetails = () => {
   const { postId } = useParams();
@@ -98,6 +89,9 @@ const PostDetails = () => {
         })
       );
       setComments(commentsWithProfiles as Comment[]);
+      
+      // Update post state with correct comment count
+      setPost(prev => prev ? ({ ...prev, comments_count: data.length }) : null);
     }
     setLoadingComments(false);
   };
@@ -200,87 +194,65 @@ const PostDetails = () => {
     );
   }
 
-  if (!post) return null;
-
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 pb-20 lg:pb-6">
+    <div className="container max-w-4xl py-6 space-y-6">
       <Button 
         variant="ghost" 
-        className="mb-4 pl-0 hover:bg-transparent hover:text-primary" 
+        className="mb-4" 
         onClick={() => navigate(-1)}
       >
-        <ArrowLeft className="h-4 w-4 mr-2" />
+        <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
 
-      <PostCard 
-        post={post}
-        currentUserId={user?.id}
-        onLike={handleLike}
-        onDelete={handleDeletePost}
-        isLiked={isLiked}
-        isDetailView={true}
-      />
+      {post && (
+        <PostCard 
+          post={post} 
+          currentUserId={user?.id}
+          onLike={handleLike}
+          onDelete={handleDeletePost}
+        />
+      )}
 
-      <div className="mt-6 bg-card rounded-lg border p-4">
+      <div className="mt-6 glass-card rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-4">Comments ({comments.length})</h3>
         
-        <div className="flex gap-3 mb-6">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="" /> 
-            {/* Ideally we should have current user avatar here, but we can rely on fallback or fetch it */}
+        <div className="flex gap-4 mb-6">
+          <Avatar>
+            <AvatarImage src={user?.user_metadata?.avatar_url} />
             <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
-          <div className="flex-1 gap-2 flex">
+          <div className="flex-1 space-y-2">
             <Textarea
               placeholder="Write a comment..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              className="resize-none min-h-[40px] h-[40px]"
+              className="min-h-[80px] bg-white/5 border-white/10 focus:border-primary"
             />
-            <Button size="icon" onClick={handleAddComment} disabled={!newComment.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
+            <div className="flex justify-end">
+              <Button 
+                onClick={handleAddComment} 
+                disabled={!newComment.trim()}
+                size="sm"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Post Comment
+              </Button>
+            </div>
           </div>
         </div>
 
         <div className="space-y-4">
           {loadingComments ? (
             <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : comments.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">
-              No comments yet. Start the conversation!
-            </p>
           ) : (
-            comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <Avatar 
-                  className="h-8 w-8 cursor-pointer"
-                  onClick={() => navigate(`/dashboard/profile/${comment.user_id}`)}
-                >
-                  <AvatarImage src={comment.profiles?.avatar_url || ''} />
-                  <AvatarFallback>
-                    {comment.profiles?.full_name?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="bg-muted rounded-lg px-3 py-2">
-                    <p 
-                      className="font-medium text-sm cursor-pointer hover:underline"
-                      onClick={() => navigate(`/dashboard/profile/${comment.user_id}`)}
-                    >
-                      {comment.profiles?.full_name}
-                    </p>
-                    <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 ml-1">
-                    {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-              </div>
-            ))
+            <PostCommentTree 
+              comments={comments} 
+              postId={postId || ''} 
+              onCommentAdded={fetchComments} 
+            />
           )}
         </div>
       </div>

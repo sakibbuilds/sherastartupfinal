@@ -155,7 +155,7 @@ export function PostCard({
             {content.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-2.5 py-1 rounded-full bg-secondary text-xs font-medium text-secondary-foreground hover:bg-mint/10 hover:text-mint cursor-pointer transition-colors"
+                className="px-2.5 py-1 rounded-full bg-white/5 text-xs font-medium text-foreground hover:bg-mint/10 hover:text-mint cursor-pointer transition-colors"
               >
                 #{tag}
               </span>

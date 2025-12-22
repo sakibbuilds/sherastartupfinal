@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2, Flag, AlertTriangle, Check, X, Loader2, Copy, Facebook, Twitter, Linkedin, Link } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { UserBadges } from '@/components/common/UserBadges';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -47,6 +48,8 @@ export interface Post {
     full_name: string;
     avatar_url: string | null;
     title: string | null;
+    verified?: boolean;
+    is_mentor?: boolean;
   };
   startup?: {
     id: string;
@@ -208,16 +211,16 @@ export const PostCard = ({
     <>
       <Card 
         className={cn(
-          "hover:shadow-md transition-shadow mb-4", 
-          !isDetailView && "cursor-pointer"
+          "mb-4 glass-card hover:-translate-y-1", 
+          !isDetailView && "cursor-pointer hover:border-primary/30"
         )}
         onClick={() => !isDetailView && navigate(`/dashboard/post/${post.id}`)}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <Avatar 
-                className="cursor-pointer hover:opacity-80 transition-opacity"
+                className="cursor-pointer hover:opacity-80 transition-opacity mt-1"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/dashboard/profile/${post.user_id}`);
@@ -231,15 +234,15 @@ export const PostCard = ({
               <div>
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p 
-                      className="font-semibold cursor-pointer hover:underline"
-                      onClick={(e) => {
+                    <div className="flex items-center gap-1 cursor-pointer hover:underline" onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/dashboard/profile/${post.user_id}`);
-                      }}
-                    >
-                      {post.profiles?.full_name || 'User'}
-                    </p>
+                      }}>
+                      <p className="font-semibold">
+                        {post.profiles?.full_name || 'User'}
+                      </p>
+                      <UserBadges verified={post.profiles?.verified} isMentor={post.profiles?.is_mentor} size="sm" />
+                    </div>
                     {post.startup && (
                       <StartupBadge startup={post.startup} />
                     )}
@@ -427,6 +430,7 @@ export const PostCard = ({
                 placeholder="Provide more details..."
                 value={reportDescription}
                 onChange={(e) => setReportDescription(e.target.value)}
+                className="bg-white/5 border-white/10 focus:border-primary"
               />
             </div>
           </div>

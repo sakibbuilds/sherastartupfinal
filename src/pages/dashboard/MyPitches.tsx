@@ -150,7 +150,7 @@ const MyPitches = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <Card className="overflow-hidden hover:shadow-md transition-shadow">
+              <Card className="overflow-hidden glass-card">
                 <div 
                   className="relative aspect-video bg-muted cursor-pointer group"
                   onClick={() => handlePlayVideo(pitch.id)}

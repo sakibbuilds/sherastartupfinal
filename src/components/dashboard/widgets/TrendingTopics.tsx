@@ -71,7 +71,7 @@ export const TrendingTopics = ({ displayMode = 'list' }: TrendingTopicsProps) =>
   }
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Hash className="h-4 w-4" />

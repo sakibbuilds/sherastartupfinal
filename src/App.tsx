@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -28,13 +29,23 @@ import BecomeMentor from "./pages/dashboard/BecomeMentor";
 import AdminMentorships from "./pages/dashboard/AdminMentorships";
 import AdminAdvertisements from "./pages/dashboard/AdminAdvertisements";
 import Search from "./pages/dashboard/Search";
+import Settings from "./pages/dashboard/Settings";
+
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminStartups from "./pages/admin/AdminStartups";
+import AdminVerification from "./pages/admin/AdminVerification";
+import AdminMentors from "./pages/admin/AdminMentors";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <PresenceProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <PresenceProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -43,31 +54,50 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminOverview />} />
+                <Route path="dashboard" element={<AdminOverview />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="startups" element={<AdminStartups />} />
+                <Route path="mentors" element={<AdminMentors />} />
+                <Route path="verification" element={<AdminVerification />} />
+              </Route>
+
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<Feed />} />
                 <Route path="pitches" element={<Pitches />} />
                 <Route path="pitches/my" element={<MyPitches />} />
                 <Route path="pitches/upload" element={<UploadPitch />} />
-                <Route path="match" element={<Match />} />
+                <Route path="network" element={<Match />} />
+                <Route path="network/connections" element={<Match />} />
+                <Route path="network/requests" element={<Match />} />
                 <Route path="messages" element={<Messages />} />
+                <Route path="mentorship" element={<Bookings />} />
+                <Route path="mentorship/find" element={<Bookings />} />
+                <Route path="mentorship/become" element={<BecomeMentor />} />
                 <Route path="bookings" element={<Bookings />} />
                 <Route path="startups" element={<Startups />} />
                 <Route path="startups/:startupId" element={<StartupDetails />} />
                 <Route path="founders" element={<Founders />} />
                 <Route path="investors" element={<Investors />} />
-                <Route path="become-mentor" element={<BecomeMentor />} />
-                <Route path="admin/mentorships" element={<AdminMentorships />} />
+                <Route path="admin/mentorships/requests" element={<AdminMentorships />} />
+                <Route path="admin/mentorships/all" element={<AdminMentors />} />
                 <Route path="admin/advertisements" element={<AdminAdvertisements />} />
                 <Route path="search" element={<Search />} />
                 <Route path="post/:postId" element={<PostDetails />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="profile/:userId" element={<UserProfilePage />} />
+                <Route path="settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
       </PresenceProvider>
+      </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

@@ -142,7 +142,7 @@ export const useNotifications = () => {
           navigate('/dashboard/bookings');
           break;
         case 'match':
-          navigate('/dashboard/match');
+          navigate('/dashboard/network');
           break;
         case 'profile':
           navigate(`/dashboard/profile/${notification.reference_id}`);
@@ -164,7 +164,7 @@ export const useNotifications = () => {
           navigate('/dashboard/bookings');
           break;
         case 'match':
-          navigate('/dashboard/match');
+          navigate('/dashboard/network');
           break;
         default:
           navigate('/dashboard');

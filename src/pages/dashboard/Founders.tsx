@@ -21,7 +21,10 @@ import {
   MessageSquare,
   UserCheck,
   Building2,
-  Loader2
+  Loader2,
+  Check,
+  Plus,
+  Clock
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -40,6 +43,7 @@ interface Profile {
   title: string | null;
   expertise: string[] | null;
   created_at: string;
+  verified?: boolean;
 }
 
 interface Startup {
@@ -49,6 +53,8 @@ interface Startup {
   founder_id: string;
 }
 
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+
 const Founders = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +63,8 @@ const Founders = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [startups, setStartups] = useState<Record<string, Startup>>({});
   const [connectionStatus, setConnectionStatus] = useState<Record<string, 'none' | 'pending' | 'accepted' | 'incoming'>>({});
+  const [connectionCounts, setConnectionCounts] = useState<Record<string, number>>({});
+  const [startupCounts, setStartupCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   
@@ -109,9 +117,10 @@ const Founders = () => {
         const uniqueExpertise = Array.from(new Set(allExpertise));
         setAvailableExpertise(uniqueExpertise.sort());
 
-        // Fetch Startups
+          // Fetch Startups and Counts
         const userIds = profilesData.map(p => p.user_id);
         if (userIds.length > 0) {
+          // Fetch Startups for display and count
           const { data: startupsData } = await supabase
             .from('startups')
             .select('id, name, industry, founder_id')
@@ -119,13 +128,43 @@ const Founders = () => {
           
           if (startupsData) {
             const startupsMap: Record<string, Startup> = {};
+            const sCounts: Record<string, number> = {};
+            
             startupsData.forEach(s => {
+              // Map for badge (takes the last one found, or we could handle multiple)
               startupsMap[s.founder_id] = s;
+              // Count
+              sCounts[s.founder_id] = (sCounts[s.founder_id] || 0) + 1;
             });
             setStartups(startupsMap);
+            setStartupCounts(sCounts);
           }
 
-          // Fetch Connections if user is logged in
+          // Fetch Global Connection Counts for these users
+          // We need to count matches where status='accepted' for each user
+          // Query all accepted matches involving these users
+          const { data: allMatches } = await supabase
+            .from('matches')
+            .select('user_id, matched_user_id')
+            .eq('status', 'accepted')
+            .or(`user_id.in.(${userIds.join(',')}),matched_user_id.in.(${userIds.join(',')})`);
+
+          if (allMatches) {
+            const cCounts: Record<string, number> = {};
+            allMatches.forEach(m => {
+              // Increment for user_id if they are in our list
+              if (userIds.includes(m.user_id)) {
+                cCounts[m.user_id] = (cCounts[m.user_id] || 0) + 1;
+              }
+              // Increment for matched_user_id if they are in our list
+              if (userIds.includes(m.matched_user_id)) {
+                cCounts[m.matched_user_id] = (cCounts[m.matched_user_id] || 0) + 1;
+              }
+            });
+            setConnectionCounts(cCounts);
+          }
+
+          // Fetch Connections status for logged in user
           if (user) {
             const { data: matchesData } = await supabase
               .from('matches')
@@ -297,6 +336,10 @@ const Founders = () => {
     return acc;
   }, {} as Record<string, number>);
 
+  const isVerified = (profile: Profile) => {
+    return profile.verified === true;
+  };
+
   return (
     <div className="px-6 md:px-10 py-8 space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -338,7 +381,7 @@ const Founders = () => {
                 placeholder="Search founders..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-card"
+                className="pl-9 bg-white/5 border-white/10 focus:border-primary"
               />
             </div>
 
@@ -457,9 +500,9 @@ const Founders = () => {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="h-24 bg-muted rounded-t-lg" />
-                  <CardContent className="pt-8">
+                <Card key={i} className="animate-pulse glass-card">
+                      <CardHeader className="h-24 bg-muted/20 rounded-t-lg" />
+                      <CardContent className="pt-8">
                     <div className="h-16 w-16 rounded-full bg-muted -mt-16 border-4 border-background mb-4 mx-auto" />
                     <div className="h-4 bg-muted rounded w-3/4 mx-auto mb-2" />
                     <div className="h-3 bg-muted rounded w-1/2 mx-auto" />
@@ -469,167 +512,105 @@ const Founders = () => {
             </div>
           ) : filteredProfiles.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {paginatedProfiles.map((profile) => (
                   <div
                     key={profile.id}
-                    className="h-full"
+                    className="relative aspect-[3/4] rounded-3xl overflow-hidden cursor-pointer group shadow-xl"
+                    onClick={() => navigate(`/dashboard/profile/${profile.user_id}`)}
                   >
-                    <Card 
-                      className="h-full hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden border-border/50"
-                      onClick={() => navigate(`/dashboard/profile/${profile.user_id}`)}
-                    >
-                      <CardContent className="pt-6 text-center relative pb-20 px-4 flex flex-col h-full">
-                        {/* Top Badges Row */}
-                        <div className="flex justify-between items-start mb-6">
-                          {startups[profile.user_id] ? (
-                             <Badge 
-                               variant="outline" 
-                               className="text-xs border-primary/20 text-primary flex items-center gap-1 max-w-[120px] truncate cursor-pointer hover:bg-primary/10 transition-colors"
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 navigate(`/dashboard/startups/${startups[profile.user_id].id}`);
-                               }}
-                             >
-                               <Building2 className="h-3 w-3 shrink-0" />
-                               <span className="truncate">{startups[profile.user_id].name}</span>
-                             </Badge>
-                          ) : (
-                            <div /> // Spacer if no startup
-                          )}
-                          
-                          {profile.university && (
-                              <Badge 
-                                variant="secondary" 
-                                className="text-xs max-w-[120px] truncate cursor-pointer hover:bg-secondary/80 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFilterUniversity(profile.university!);
-                                }}
-                              >
-                                <GraduationCap className="h-3 w-3 mr-1 shrink-0" />
-                                <span className="truncate">{profile.university}</span>
-                              </Badge>
-                          )}
-                        </div>
+                    {/* Background Image */}
+                    {profile.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt={profile.full_name}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/30 to-purple-600/30 flex items-center justify-center">
+                        <span className="text-6xl font-bold text-white/20">
+                          {profile.full_name?.substring(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
 
-                        <div className="flex justify-center mb-4">
-                          <Avatar className="h-24 w-24 border-4 border-background shadow-sm">
-                            <AvatarImage src={profile.avatar_url || ''} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                              {profile.full_name?.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                    {/* Content */}
+                    <div className="absolute bottom-0 left-0 right-0 p-5 text-white transform transition-transform duration-300 translate-y-2 group-hover:translate-y-0">
+                      {/* Name and Badge */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold truncate">{profile.full_name}</h3>
+                        {/* Verified Badge */}
+                        {isVerified(profile) && (
+                          <VerifiedBadge size="sm" />
+                        )}
+                      </div>
+
+                      {/* Bio/Title */}
+                      <p className="text-sm text-gray-300 line-clamp-2 mb-4 font-medium">
+                        {profile.title || profile.bio || 'Founder'}
+                      </p>
+
+                      {/* Stats & Action */}
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-4 text-sm font-medium text-gray-300">
+                          <div className="flex items-center gap-1.5">
+                            <Users className="w-4 h-4" />
+                            <span>{connectionCounts[profile.user_id] || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase className="w-4 h-4" />
+                            <span>{startupCounts[profile.user_id] || 0}</span>
+                          </div>
                         </div>
                         
-                        <div className="space-y-3 flex-grow">
-                          <div>
-                            <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
-                              {profile.full_name}
-                            </h3>
-                            {profile.title && (
-                              <p className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1.5">
-                                <Briefcase className="h-3 w-3" />
-                                {profile.title}
-                              </p>
-                            )}
-                          </div>
-
-                          {profile.bio && (
-                            <p className="text-sm text-muted-foreground line-clamp-2 px-2">
-                              {profile.bio}
-                            </p>
-                          )}
-
-                          {profile.expertise && profile.expertise.length > 0 && (
-                            <div className="flex flex-wrap justify-center gap-1.5 pt-2">
-                              {profile.expertise.slice(0, 3).map((exp, i) => (
-                                <Badge 
-                                  key={i} 
-                                  variant="outline" 
-                                  className="text-xs bg-muted/50 font-normal cursor-pointer hover:bg-muted transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setFilterExpertise(exp);
-                                  }}
-                                >
-                                  {exp}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="absolute bottom-6 left-0 right-0 px-4 flex gap-2 justify-center">
-                          {user && user.id === profile.user_id ? (
-                            <Button variant="outline" size="sm" className="w-full">
-                              View Profile
-                            </Button>
+                        <Button 
+                          size="sm" 
+                          className="rounded-full bg-white text-black hover:bg-white/90 px-5 font-semibold transition-all hover:scale-105 active:scale-95 h-9"
+                          onClick={(e) => handleConnect(e, profile.user_id)}
+                        >
+                          {connectionStatus[profile.user_id] === 'accepted' ? (
+                            <>Message <MessageSquare className="w-3.5 h-3.5 ml-1.5" /></>
+                          ) : connectionStatus[profile.user_id] === 'pending' ? (
+                            <>Pending <Clock className="w-3.5 h-3.5 ml-1.5" /></>
                           ) : (
-                            <>
-                              {connectionStatus[profile.user_id] === 'accepted' ? (
-                                <Button 
-                                  size="sm" 
-                                  variant="secondary"
-                                  className="flex-1 bg-green-100 text-green-700 hover:bg-green-200 border-green-200"
-                                  disabled
-                                >
-                                  <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                                  Connected
-                                </Button>
-                              ) : connectionStatus[profile.user_id] === 'pending' ? (
-                                <Button 
-                                  size="sm" 
-                                  variant="secondary"
-                                  className="flex-1"
-                                  disabled
-                                >
-                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                  Pending
-                                </Button>
-                              ) : connectionStatus[profile.user_id] === 'incoming' ? (
-                                <Button 
-                                  size="sm" 
-                                  className="flex-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/dashboard/profile/${profile.user_id}`);
-                                  }}
-                                >
-                                  <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                                  Accept
-                                </Button>
-                              ) : (
-                                <Button 
-                                  size="sm" 
-                                  className="flex-1"
-                                  onClick={(e) => handleConnect(e, profile.user_id)}
-                                  disabled={actionLoading === profile.user_id}
-                                >
-                                  {actionLoading === profile.user_id ? (
-                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                  ) : (
-                                    <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                                  )}
-                                  Connect
-                                </Button>
-                              )}
-                              
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="flex-1"
-                                onClick={(e) => handleMessage(e, profile.user_id)}
-                              >
-                                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                                Message
-                              </Button>
-                            </>
+                            <>Connect <Plus className="w-3.5 h-3.5 ml-1.5" /></>
                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Top Badges (University/Startup) */}
+                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                      {startups[profile.user_id] && (
+                         <Badge 
+                           className="bg-black/40 backdrop-blur-md border-white/10 text-white hover:bg-black/60 px-3 py-1"
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             navigate(`/dashboard/startups/${startups[profile.user_id].id}`);
+                           }}
+                         >
+                           <Building2 className="h-3 w-3 mr-1.5" />
+                           {startups[profile.user_id].name}
+                         </Badge>
+                      )}
+                      
+                      {profile.university && (
+                          <Badge 
+                            variant="secondary" 
+                            className="bg-white/20 backdrop-blur-md border-transparent text-white hover:bg-white/30 px-3 py-1 w-fit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFilterUniversity(profile.university!);
+                            }}
+                          >
+                            <GraduationCap className="h-3 w-3 mr-1.5" />
+                            {profile.university}
+                          </Badge>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -121,12 +121,17 @@ const Onboarding = () => {
   const checkOnboardingStatus = async () => {
     if (!user) return;
     
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('onboarding_completed, full_name')
       .eq('user_id', user.id)
       .maybeSingle();
     
+    if (error) {
+      console.error("Error checking onboarding status:", error);
+      return;
+    }
+
     if (data?.onboarding_completed) {
       navigate('/dashboard');
     } else if (data?.full_name) {
@@ -259,7 +264,7 @@ const Onboarding = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="text-center">
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Rocket className="h-8 w-8 text-primary" />
@@ -292,7 +297,7 @@ const Onboarding = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl">What describes you best?</CardTitle>
                   <CardDescription>This helps us personalize your experience</CardDescription>
@@ -332,7 +337,7 @@ const Onboarding = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl">Select your university</CardTitle>
                   <CardDescription>Choose from the list or add your own</CardDescription>
@@ -437,7 +442,7 @@ const Onboarding = () => {
                       <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">or</span>
+                      <span className="bg-background px-2 text-muted-foreground">or</span>
                     </div>
                   </div>
 
@@ -483,7 +488,7 @@ const Onboarding = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl">Almost there!</CardTitle>
                   <CardDescription>Add a few more details to complete your profile</CardDescription>
@@ -501,6 +506,7 @@ const Onboarding = () => {
                         userType === 'mentor' ? 'e.g., Senior Software Engineer' :
                         'e.g., Computer Science Student'
                       }
+                      className="bg-white/5 border-white/10 focus:border-primary"
                     />
                   </div>
 
@@ -511,7 +517,7 @@ const Onboarding = () => {
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                       placeholder="Tell us about yourself..."
-                      className="resize-none"
+                      className="resize-none bg-white/5 border-white/10 focus:border-primary"
                     />
                   </div>
 
@@ -522,6 +528,7 @@ const Onboarding = () => {
                       value={linkedinUrl}
                       onChange={(e) => setLinkedinUrl(e.target.value)}
                       placeholder="https://linkedin.com/in/yourprofile"
+                      className="bg-white/5 border-white/10 focus:border-primary"
                     />
                   </div>
 
@@ -533,6 +540,7 @@ const Onboarding = () => {
                         onChange={(e) => setNewSkill(e.target.value)}
                         placeholder="Add a skill"
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                        className="bg-white/5 border-white/10 focus:border-primary"
                       />
                       <Button type="button" onClick={addSkill} size="icon">
                         <Plus className="h-4 w-4" />

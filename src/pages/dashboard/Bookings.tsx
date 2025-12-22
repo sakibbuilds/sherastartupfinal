@@ -37,6 +37,8 @@ import { format, addDays, setHours, setMinutes, isBefore, startOfDay } from 'dat
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+import { UserBadges } from '@/components/common/UserBadges';
+
 interface Mentor {
   id: string;
   user_id: string;
@@ -46,6 +48,8 @@ interface Mentor {
   expertise: string[] | null;
   hourly_rate: number | null;
   bio: string | null;
+  verified?: boolean;
+  is_mentor?: boolean;
 }
 
 interface Booking {
@@ -58,10 +62,14 @@ interface Booking {
     full_name: string;
     avatar_url: string | null;
     title: string | null;
+    verified?: boolean;
+    is_mentor?: boolean;
   };
   mentee: {
     full_name: string;
     avatar_url: string | null;
+    verified?: boolean;
+    is_mentor?: boolean;
   };
   mentor_id: string;
   mentee_id: string;
@@ -109,17 +117,39 @@ const Bookings = () => {
   };
 
   const fetchMentors = async () => {
-    // For now, fetch all profiles with expertise (simulating mentors)
-    const { data, error } = await supabase
+    // Fetch available mentors from profiles
+    const { data: mentorsData, error } = await supabase
       .from('profiles')
-      .select('*')
-      .not('expertise', 'is', null)
-      .limit(20);
+      .select('user_id, full_name, avatar_url, title, verified, is_mentor, expertise, bio')
+      .eq('is_mentor', true);
 
     if (error) {
       console.error('Error fetching mentors:', error);
-    } else {
-      setMentors(data || []);
+      // If the column doesn't exist yet, we can't fetch mentors properly.
+      // We'll just set an empty list to avoid crashing the UI.
+      if (error.code === '42703') { // Undefined column
+         // Fallback: If we can't filter by is_mentor, we could fetch all users or just show empty.
+         // Showing empty is safer until migration is run.
+         setMentors([]);
+         setLoading(false);
+         return;
+      }
+    }
+
+    if (mentorsData) {
+      const formattedMentors = mentorsData.map((m: any) => ({
+        id: m.user_id, // Use user_id as id for consistency
+        user_id: m.user_id,
+        full_name: m.full_name,
+        avatar_url: m.avatar_url,
+        title: m.title,
+        expertise: m.expertise,
+        hourly_rate: 100, // Default or mock value since it's not in profiles yet
+        bio: m.bio,
+        verified: m.verified,
+        is_mentor: m.is_mentor
+      }));
+      setMentors(formattedMentors);
     }
     setLoading(false);
   };
@@ -127,36 +157,50 @@ const Bookings = () => {
   const fetchBookings = async () => {
     if (!user) return;
 
-    const { data } = await supabase
+    // Fetch bookings
+    const { data: bookingsData } = await supabase
       .from('bookings')
       .select('*')
-      .or(`mentor_id.eq.${user.id},mentee_id.eq.${user.id}`)
+      .or(`mentee_id.eq.${user.id},mentor_id.eq.${user.id}`)
       .order('scheduled_at', { ascending: true });
 
-    if (data) {
-      // Fetch profiles separately for each booking
-      const bookingsWithProfiles = await Promise.all(
-        data.map(async (booking) => {
-          const { data: mentorProfile } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url, title')
-            .eq('user_id', booking.mentor_id)
-            .maybeSingle();
-
-          const { data: menteeProfile } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('user_id', booking.mentee_id)
-            .maybeSingle();
-
+    if (bookingsData) {
+      // Get all unique user IDs involved
+      const userIds = new Set<string>();
+      bookingsData.forEach((b: any) => {
+        if (b.mentee_id) userIds.add(b.mentee_id);
+        if (b.mentor_id) userIds.add(b.mentor_id);
+      });
+      
+      // Fetch all involved profiles
+       const { data: profiles } = await supabase
+         .from('profiles')
+         .select('user_id, full_name, avatar_url, title, verified, is_mentor')
+         .in('user_id', Array.from(userIds));
+          
+       const formattedBookings = bookingsData.map((b: any) => {
+          const mentorProfile = profiles?.find(p => p.user_id === b.mentor_id);
+          const menteeProfile = profiles?.find(p => p.user_id === b.mentee_id);
+          
           return {
-            ...booking,
-            mentor: mentorProfile || { full_name: 'Unknown', avatar_url: null, title: null },
-            mentee: menteeProfile || { full_name: 'Unknown', avatar_url: null }
+            ...b,
+            mentor: {
+              full_name: mentorProfile?.full_name,
+              avatar_url: mentorProfile?.avatar_url,
+              title: mentorProfile?.title,
+              verified: mentorProfile?.verified,
+              is_mentor: mentorProfile?.is_mentor
+            },
+            mentee: {
+              full_name: menteeProfile?.full_name,
+              avatar_url: menteeProfile?.avatar_url,
+              verified: menteeProfile?.verified,
+              is_mentor: menteeProfile?.is_mentor
+            }
           };
-        })
-      );
-      setBookings(bookingsWithProfiles as Booking[]);
+       });
+
+      setBookings(formattedBookings);
     }
   };
 
@@ -270,7 +314,7 @@ const Bookings = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="hover:shadow-md transition-shadow">
+                  <Card className="glass-card hover:-translate-y-1 transition-all duration-300">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
                         <Avatar className="h-16 w-16">
@@ -278,7 +322,10 @@ const Bookings = () => {
                           <AvatarFallback>{mentor.full_name?.charAt(0) || 'M'}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold">{mentor.full_name}</h3>
+                          <div className="flex items-center gap-1">
+                            <h3 className="font-semibold">{mentor.full_name}</h3>
+                            <UserBadges verified={mentor.verified} isMentor={mentor.is_mentor} size="sm" />
+                          </div>
                           <p className="text-sm text-muted-foreground">{mentor.title || 'Mentor'}</p>
                           
                           {mentor.expertise && mentor.expertise.length > 0 && (
@@ -360,7 +407,7 @@ const Bookings = () => {
                                 placeholder="What would you like to discuss?"
                                 value={bookingNotes}
                                 onChange={(e) => setBookingNotes(e.target.value)}
-                                className="resize-none"
+                                className="resize-none bg-white/5 border-white/10 focus:border-primary"
                               />
                             </div>
 
@@ -399,7 +446,7 @@ const Bookings = () => {
               const otherPerson = isMentor ? booking.mentee : booking.mentor;
               
               return (
-                <Card key={booking.id}>
+                <Card key={booking.id} className="glass-card">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <Avatar>
@@ -410,7 +457,10 @@ const Bookings = () => {
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">{otherPerson?.full_name}</h3>
+                          <div className="flex items-center gap-1">
+                             <h3 className="font-semibold">{otherPerson?.full_name}</h3>
+                             <UserBadges verified={otherPerson?.verified} isMentor={otherPerson?.is_mentor} size="sm" />
+                          </div>
                           {getStatusBadge(booking.status)}
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -482,7 +532,7 @@ const Bookings = () => {
               const otherPerson = isMentor ? booking.mentee : booking.mentor;
               
               return (
-                <Card key={booking.id} className="opacity-75">
+                <Card key={booking.id} className="glass-card opacity-75">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <Avatar>
@@ -493,7 +543,10 @@ const Bookings = () => {
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">{otherPerson?.full_name}</h3>
+                          <div className="flex items-center gap-1">
+                             <h3 className="font-semibold">{otherPerson?.full_name}</h3>
+                             <UserBadges verified={otherPerson?.verified} isMentor={otherPerson?.is_mentor} size="sm" />
+                          </div>
                           {getStatusBadge(booking.status)}
                         </div>
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">

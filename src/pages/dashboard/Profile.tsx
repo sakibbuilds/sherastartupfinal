@@ -220,7 +220,7 @@ const ProfilePage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-4">
               {/* Avatar with upload button */}
@@ -324,7 +324,7 @@ const ProfilePage = () => {
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Tell others about yourself, your experience, and what you're working on..."
-                className="resize-none min-h-[120px]"
+                className="resize-none min-h-[120px] bg-white/5 border-white/10 focus:border-primary"
               />
             </div>
 
@@ -336,6 +336,7 @@ const ProfilePage = () => {
                   onChange={(e) => setNewSkill(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Add a skill..."
+                  className="bg-white/5 border-white/10 focus:border-primary"
                 />
                 <Button type="button" onClick={addSkill} size="icon">
                   <Plus className="h-4 w-4" />
@@ -370,7 +371,7 @@ const ProfilePage = () => {
                   value={hourlyRate}
                   onChange={(e) => setHourlyRate(e.target.value)}
                   placeholder="0"
-                  className="pl-7"
+                  className="pl-7 bg-white/5 border-white/10 focus:border-primary"
                 />
               </div>
               <p className="text-xs text-muted-foreground">

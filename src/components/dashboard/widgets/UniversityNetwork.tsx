@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { GraduationCap } from 'lucide-react';
+import { UserBadges } from '@/components/common/UserBadges';
 
 interface UniversityNetworkProps {
   displayMode?: 'list' | 'carousel';
@@ -33,11 +34,11 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
       setUniversity(userData.university);
       
       const { data } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, avatar_url, title')
-        .eq('university', userData.university)
-        .neq('user_id', user?.id)
-        .limit(displayMode === 'carousel' ? 10 : 5);
+      .from('profiles')
+      .select('user_id, full_name, avatar_url, title, verified, is_mentor')
+      .eq('university', university)
+      .neq('user_id', user?.id)
+      .limit(displayMode === 'carousel' ? 10 : 5);
 
       if (data) setNetwork(data);
     }
@@ -53,7 +54,7 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
         </h3>
         <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 scrollbar-hide">
           {network.map((person) => (
-            <Card key={person.user_id} className="min-w-[150px] w-[150px] flex-shrink-0">
+            <Card key={person.user_id} className="min-w-[150px] w-[150px] flex-shrink-0 glass-card">
               <CardContent className="p-3 flex flex-col items-center text-center gap-2">
                 <Avatar 
                   className="h-16 w-16 cursor-pointer"
@@ -75,7 +76,7 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
             </Card>
           ))}
           <div className="min-w-[100px] flex items-center justify-center">
-            <Button variant="link" className="text-xs" onClick={() => navigate('/dashboard/match')}>
+            <Button variant="link" className="text-xs" onClick={() => navigate('/dashboard/network')}>
               View all
             </Button>
           </div>
@@ -85,7 +86,7 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
   }
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <GraduationCap className="h-4 w-4" />
@@ -103,17 +104,17 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
               <AvatarFallback>{person.full_name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p 
-                className="text-sm font-medium truncate cursor-pointer hover:underline"
-                onClick={() => navigate(`/dashboard/profile/${person.user_id}`)}
-              >
-                {person.full_name}
-              </p>
+              <div className="flex items-center gap-1 cursor-pointer hover:underline" onClick={() => navigate(`/dashboard/profile/${person.user_id}`)}>
+                <p className="text-sm font-medium truncate">
+                  {person.full_name}
+                </p>
+                <UserBadges verified={person.verified} isMentor={person.is_mentor} size="sm" />
+              </div>
               <p className="text-xs text-muted-foreground truncate">{person.title || 'Student'}</p>
             </div>
           </div>
         ))}
-        <Button variant="link" className="w-full text-xs h-auto p-0" onClick={() => navigate('/dashboard/match')}>
+        <Button variant="link" className="w-full text-xs h-auto p-0" onClick={() => navigate('/dashboard/network')}>
           View all from {university}
         </Button>
       </CardContent>

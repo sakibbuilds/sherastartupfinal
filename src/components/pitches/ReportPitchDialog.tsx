@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Flag, AlertTriangle, Ban, Copyright, UserX, ShieldAlert } from 'lucide-react';
 
@@ -117,6 +118,9 @@ const ReportPitchDialog = ({ open, onOpenChange, videoId, videoTitle }: ReportPi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
+          <VisuallyHidden.Root>
+            <DialogTitle>Report Pitch Dialog</DialogTitle>
+          </VisuallyHidden.Root>
           <DialogTitle className="flex items-center gap-2">
             <Flag className="h-5 w-5 text-destructive" />
             Report Pitch

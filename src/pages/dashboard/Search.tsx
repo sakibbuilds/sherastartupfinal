@@ -74,7 +74,7 @@ const Search = () => {
           <Input
             type="search"
             placeholder="Search people..."
-            className="pl-9"
+            className="pl-9 bg-white/5 border-white/10 focus:border-primary"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -92,7 +92,7 @@ const Search = () => {
             results.map((profile) => (
               <Card 
                 key={profile.id} 
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                className="glass-card cursor-pointer hover:bg-white/10 transition-colors"
                 onClick={() => navigate(`/dashboard/profile/${profile.user_id}`)}
               >
                 <CardContent className="p-4 flex items-center justify-between">

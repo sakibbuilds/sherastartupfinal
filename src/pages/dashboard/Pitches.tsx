@@ -20,7 +20,8 @@ import {
   Eye,
   Search,
   Filter,
-  X
+  X,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,8 @@ import {
 import CommentTree, { Comment } from '@/components/pitches/CommentTree';
 import ReportPitchDialog from '@/components/pitches/ReportPitchDialog';
 import { StartupBadge } from '@/components/common/StartupBadge';
+import { FollowButton } from '@/components/common/FollowButton';
+import { AvatarWithPresence } from '@/components/common/OnlineIndicator';
 
 interface VideoPitch {
   id: string;
@@ -59,6 +62,7 @@ interface VideoPitch {
     full_name: string;
     avatar_url: string | null;
     title: string | null;
+    verified?: boolean;
   };
   startup?: {
     id: string;
@@ -158,7 +162,7 @@ const Pitches = () => {
         data.map(async (pitch) => {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, avatar_url, title')
+            .select('full_name, avatar_url, title, verified')
             .eq('user_id', pitch.user_id)
             .maybeSingle();
 
@@ -180,7 +184,10 @@ const Pitches = () => {
             isLiked = !!likeData;
           }
 
-          return { ...pitch, user: profile, startup, isLiked };
+          // Ensure profile data is present, fallback if not
+          const safeProfile = profile || { full_name: 'Unknown User', avatar_url: null, title: null };
+
+          return { ...pitch, user: safeProfile, startup, isLiked };
         })
       );
 
@@ -500,7 +507,7 @@ const Pitches = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="bg-black/50 text-white hover:bg-black/70"
+              className="bg-white/5 text-white hover:bg-white/10"
               onClick={() => setShowSearch(true)}
             >
               <Search className="h-5 w-5" />
@@ -513,7 +520,7 @@ const Pitches = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="bg-black/50 text-white hover:bg-black/70 relative"
+              className="bg-white/5 text-white hover:bg-white/10 relative"
             >
               <Filter className="h-5 w-5" />
               {activeFiltersCount > 0 && (
@@ -604,133 +611,161 @@ const Pitches = () => {
               className="h-full w-full snap-start snap-always relative flex items-center justify-center"
               style={{ scrollSnapAlign: 'start' }}
             >
-              {/* Video */}
-              <video
-                ref={(el) => { videoRefs.current[pitch.id] = el; }}
-                src={pitch.video_url}
-                poster={pitch.thumbnail_url || undefined}
-                className="h-full w-full object-contain bg-black"
-                loop
-                muted={muted}
-                playsInline
-                onClick={() => setPlaying(!playing)}
-              />
+              {/* Mobile Styled Container */}
+              <div className="relative w-full h-full md:max-w-[420px] md:h-[calc(100vh-6rem)] md:my-4 md:rounded-3xl overflow-hidden bg-black shadow-2xl border border-white/5">
+                {/* Video */}
+                <video
+                  ref={(el) => { videoRefs.current[pitch.id] = el; }}
+                  src={pitch.video_url}
+                  poster={pitch.thumbnail_url || undefined}
+                  className="h-full w-full object-cover bg-black"
+                  loop
+                  muted={muted}
+                  playsInline
+                  onClick={() => setPlaying(!playing)}
+                />
 
-              {/* Mute Button - Top Right */}
-              <button
-                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white z-10"
-                onClick={() => setMuted(!muted)}
-              >
-                {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-              </button>
+                {/* Mute Button - Top Right */}
+                <button
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white z-10 hover:bg-black/60 transition-colors"
+                  onClick={() => setMuted(!muted)}
+                >
+                  {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                </button>
 
-              {/* Play/Pause Indicator */}
-              <AnimatePresence>
-                {!playing && index === currentIndex && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  >
-                    <div className="w-20 h-20 rounded-full bg-black/50 flex items-center justify-center">
-                      <Play className="h-10 w-10 text-white ml-1" />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Overlay Content */}
-              <div className="absolute inset-0 pointer-events-none">
-                {/* Bottom Info */}
-                <div className="absolute bottom-0 left-0 right-16 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                  <div className="flex items-center gap-3 mb-3 pointer-events-auto">
-                    <Avatar 
-                      className="h-10 w-10 border-2 border-white cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => handleViewProfile(pitch.user_id)}
+                {/* Play/Pause Indicator */}
+                <AnimatePresence>
+                  {!playing && index === currentIndex && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
                     >
-                      <AvatarImage src={pitch.user?.avatar_url || ''} />
-                      <AvatarFallback>{pitch.user?.full_name?.charAt(0) || 'U'}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={() => handleViewProfile(pitch.user_id)}
-                          className="font-semibold text-white hover:underline"
-                        >
-                          {pitch.user?.full_name || 'Anonymous'}
-                        </button>
-                        {pitch.startup && (
-                          <StartupBadge 
-                            startup={pitch.startup} 
-                            className="bg-primary/30 border-none"
-                          />
-                        )}
-                        <span className="flex items-center gap-1 text-white/70 text-xs">
-                          <Eye className="h-3 w-3" />
-                          {formatCount(pitch.views_count)}
-                        </span>
+                      <div className="w-20 h-20 rounded-full bg-black/50 flex items-center justify-center">
+                        <Play className="h-10 w-10 text-white ml-1" />
                       </div>
-                      <p className="text-xs text-white/70">{pitch.user?.title || 'Founder'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-bold text-white text-lg">{pitch.title}</h3>
-                    {pitch.motive && motiveLabels[pitch.motive] && (
-                      <Badge className={cn(motiveLabels[pitch.motive].color)}>
-                        {motiveLabels[pitch.motive].label}
-                      </Badge>
-                    )}
-                  </div>
-                  {pitch.description && (
-                    <p className="text-white/80 text-sm line-clamp-2">{pitch.description}</p>
+                    </motion.div>
                   )}
-                </div>
+                </AnimatePresence>
 
-                {/* Right Side Actions */}
-                <div className="absolute right-4 bottom-24 flex flex-col items-center gap-5 pointer-events-auto">
-                  <button
-                    className="flex flex-col items-center gap-1"
-                    onClick={() => handleLike(pitch)}
-                  >
-                    <div className={cn(
-                      "w-12 h-12 rounded-full bg-black/30 flex items-center justify-center",
-                      pitch.isLiked && "text-red-500"
-                    )}>
-                      <Heart className={cn("h-6 w-6", pitch.isLiked && "fill-current")} />
+                {/* Overlay Content */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/80" />
+                  
+                  {/* Right Side Actions */}
+                  <div className="absolute right-2 bottom-20 flex flex-col gap-4 pointer-events-auto items-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="rounded-full h-12 w-12 bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm"
+                        onClick={() => handleLike(pitch)}
+                      >
+                        <Heart className={cn("h-6 w-6", pitch.isLiked && "fill-red-500 text-red-500")} />
+                      </Button>
+                      <span className="text-xs font-medium text-white">{formatCount(pitch.likes_count)}</span>
                     </div>
-                    <span className="text-white text-xs">{formatCount(pitch.likes_count)}</span>
-                  </button>
 
-                  <button
-                    className="flex flex-col items-center gap-1"
-                    onClick={() => handleOpenComments(pitch)}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white">
-                      <MessageCircle className="h-6 w-6" />
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="rounded-full h-12 w-12 bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm"
+                        onClick={() => handleOpenComments(pitch)}
+                      >
+                        <MessageCircle className="h-6 w-6" />
+                      </Button>
+                      <span className="text-xs font-medium text-white">{formatCount(pitch.comments_count)}</span>
                     </div>
-                    <span className="text-white text-xs">{formatCount(pitch.comments_count)}</span>
-                  </button>
 
-                  <button
-                    className="flex flex-col items-center gap-1"
-                    onClick={() => handleShare(pitch)}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white">
-                      <Share2 className="h-6 w-6" />
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="rounded-full h-12 w-12 bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm"
+                        onClick={() => handleShare(pitch)}
+                      >
+                        <Share2 className="h-6 w-6" />
+                      </Button>
+                      <span className="text-xs font-medium text-white">Share</span>
                     </div>
-                    <span className="text-white text-xs">Share</span>
-                  </button>
 
-                  <button
-                    className="flex flex-col items-center gap-1"
-                    onClick={() => handleReport(pitch)}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center text-white hover:text-destructive transition-colors">
-                      <Flag className="h-5 w-5" />
+                    <div className="flex flex-col items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="rounded-full h-12 w-12 bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm"
+                        onClick={() => handleReport(pitch)}
+                      >
+                        <Flag className="h-5 w-5" />
+                      </Button>
                     </div>
-                    <span className="text-white text-xs">Report</span>
-                  </button>
+                  </div>
+
+                  {/* Bottom Info */}
+                  <div className="absolute bottom-0 left-0 right-16 p-4 pointer-events-auto">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/dashboard/profile/${pitch.user_id}`);
+                        }}
+                      >
+                        <AvatarWithPresence userId={pitch.user_id} indicatorSize="sm">
+                          <Avatar className="h-10 w-10 border-2 border-white/20">
+                            <AvatarImage src={pitch.user?.avatar_url || ''} />
+                            <AvatarFallback>{pitch.user?.full_name?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                        </AvatarWithPresence>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span 
+                            className="font-semibold text-white hover:underline cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/dashboard/profile/${pitch.user_id}`);
+                            }}
+                          >
+                            {pitch.user?.full_name}
+                          </span>
+                          {pitch.user?.verified && (
+                            <CheckCircle2 className="h-4 w-4 text-blue-400 fill-blue-400/10" />
+                          )}
+                          <FollowButton 
+                            targetUserId={pitch.user_id} 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-white/90 hover:text-white hover:bg-white/10"
+                            hideIfFollowing={true} 
+                          />
+                        </div>
+                        {pitch.user?.title && (
+                          <span className="text-xs text-white/70">{pitch.user.title}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <h3 className="font-semibold text-white mb-2 line-clamp-2">{pitch.title}</h3>
+                    
+                    {pitch.description && (
+                      <p className="text-sm text-white/90 line-clamp-2 mb-3">
+                        {pitch.description}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      {pitch.motive && (
+                        <Badge variant="secondary" className={cn("backdrop-blur-md bg-white/20 text-white border-transparent", motiveLabels[pitch.motive]?.color)}>
+                          {motiveLabels[pitch.motive]?.label}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

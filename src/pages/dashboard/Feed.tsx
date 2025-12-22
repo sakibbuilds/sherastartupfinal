@@ -31,7 +31,7 @@ const Feed = () => {
   const fetchPosts = async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('*')
+      .select('*, post_likes(count), comments(count)')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -43,7 +43,7 @@ const Feed = () => {
         (data || []).map(async (post) => {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, avatar_url, title')
+            .select('full_name, avatar_url, title, verified, is_mentor')
             .eq('user_id', post.user_id)
             .single();
           
@@ -54,7 +54,10 @@ const Feed = () => {
             .eq('founder_id', post.user_id)
             .maybeSingle();
             
-          return { ...post, profiles: profile, startup };
+          const commentsCount = post.comments && post.comments[0] ? post.comments[0].count : 0;
+          const likesCount = post.post_likes && post.post_likes[0] ? post.post_likes[0].count : 0;
+
+          return { ...post, comments_count: commentsCount, likes_count: likesCount, profiles: profile, startup };
         })
       );
       setPosts(postsWithProfiles as Post[]);
@@ -137,7 +140,7 @@ const Feed = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Left Sidebar */}
-        <div className="hidden lg:block space-y-6">
+        <div className="hidden lg:block space-y-6 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto pr-4 scrollbar-hide">
           <SuggestedFounders />
           <UniversityNetwork />
         </div>
@@ -185,7 +188,7 @@ const Feed = () => {
         </div>
 
         {/* Right Sidebar */}
-        <div className="hidden lg:block space-y-6">
+        <div className="hidden lg:block space-y-6 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto pl-4 scrollbar-hide">
           <AdBanner />
           <TrendingTopics />
           <TrendingStartups />

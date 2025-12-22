@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserPlus } from 'lucide-react';
+import { UserBadges } from '@/components/common/UserBadges';
 
 interface SuggestedFoundersProps {
   displayMode?: 'list' | 'carousel';
@@ -24,7 +25,7 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
     // Simple logic: fetch random founders who are not the current user
     const { data } = await supabase
       .from('profiles')
-      .select('user_id, full_name, avatar_url, title')
+      .select('user_id, full_name, avatar_url, title, verified, is_mentor')
       .eq('user_type', 'founder')
       .neq('user_id', user?.id)
       .limit(displayMode === 'carousel' ? 10 : 5);
@@ -40,7 +41,7 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
         <h3 className="font-semibold text-sm mb-2 px-1">Founders you may connect</h3>
         <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 scrollbar-hide">
           {founders.map((founder) => (
-            <Card key={founder.user_id} className="min-w-[150px] w-[150px] flex-shrink-0">
+            <Card key={founder.user_id} className="min-w-[150px] w-[150px] flex-shrink-0 glass-card">
               <CardContent className="p-3 flex flex-col items-center text-center gap-2">
                 <Avatar 
                   className="h-16 w-16 cursor-pointer"
@@ -50,12 +51,12 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
                   <AvatarFallback>{founder.full_name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="w-full">
-                  <p 
-                    className="text-sm font-medium truncate cursor-pointer hover:underline"
-                    onClick={() => navigate(`/dashboard/profile/${founder.user_id}`)}
-                  >
-                    {founder.full_name}
-                  </p>
+                  <div className="flex items-center justify-center gap-1 cursor-pointer hover:underline" onClick={() => navigate(`/dashboard/profile/${founder.user_id}`)}>
+                    <p className="text-sm font-medium truncate">
+                      {founder.full_name}
+                    </p>
+                    <UserBadges verified={founder.verified} isMentor={founder.is_mentor} size="sm" />
+                  </div>
                   <p className="text-xs text-muted-foreground truncate">{founder.title || 'Founder'}</p>
                 </div>
                 <Button size="sm" variant="outline" className="w-full h-7 text-xs gap-1">
@@ -71,7 +72,7 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
   }
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold">Founders you may connect</CardTitle>
       </CardHeader>
@@ -86,12 +87,12 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
               <AvatarFallback>{founder.full_name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p 
-                className="text-sm font-medium truncate cursor-pointer hover:underline"
-                onClick={() => navigate(`/dashboard/profile/${founder.user_id}`)}
-              >
-                {founder.full_name}
-              </p>
+              <div className="flex items-center gap-1 cursor-pointer hover:underline" onClick={() => navigate(`/dashboard/profile/${founder.user_id}`)}>
+                <p className="text-sm font-medium truncate">
+                  {founder.full_name}
+                </p>
+                <UserBadges verified={founder.verified} isMentor={founder.is_mentor} size="sm" />
+              </div>
               <p className="text-xs text-muted-foreground truncate">{founder.title || 'Founder'}</p>
             </div>
             <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full">

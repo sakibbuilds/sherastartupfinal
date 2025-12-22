@@ -264,7 +264,7 @@ const UploadPitch = () => {
         Back
       </Button>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle>Upload Pitch Video</CardTitle>
           <CardDescription>
@@ -342,7 +342,7 @@ const UploadPitch = () => {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Tell viewers about your startup, what problem you're solving, and what you need..."
-              className="resize-none min-h-[100px]"
+              className="resize-none min-h-[100px] bg-white/5 border-white/10 focus:border-primary"
             />
           </div>
 

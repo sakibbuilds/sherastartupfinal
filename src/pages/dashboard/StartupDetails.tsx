@@ -35,12 +35,15 @@ import {
   ExternalLink,
   Plus,
   Upload,
-  GraduationCap
+  GraduationCap,
+  Check
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { AvatarCropper } from '@/components/common/AvatarCropper';
+
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 
 interface Startup {
   id: string;
@@ -58,6 +61,7 @@ interface Startup {
   founder_id: string;
   created_at: string;
   established_at: string | null;
+  verified?: boolean;
 }
 
 interface TeamMember {
@@ -246,23 +250,30 @@ const StartupDetails = () => {
       }
 
       // Fetch followers count
-      const { count } = await supabase
+      const { count, error: followError } = await supabase
         .from('startup_follows')
         .select('*', { count: 'exact', head: true })
         .eq('startup_id', startupId);
 
-      setFollowersCount(count || 0);
+      if (!followError) {
+        setFollowersCount(count || 0);
+      } else {
+        console.warn('Error fetching followers count:', followError);
+        setFollowersCount(0);
+      }
 
       // Check if current user follows
       if (user) {
-        const { data: followData } = await supabase
+        const { data: followData, error: userFollowError } = await supabase
           .from('startup_follows')
           .select('id')
           .eq('startup_id', startupId)
           .eq('user_id', user.id)
           .maybeSingle();
 
-        setIsFollowing(!!followData);
+        if (!userFollowError) {
+           setIsFollowing(!!followData);
+        }
       }
     } catch (error) {
       console.error('Error fetching startup:', error);
@@ -425,6 +436,10 @@ const StartupDetails = () => {
 
   const displayDate = startup?.established_at || startup?.created_at;
 
+  const isVerified = (s: Startup) => {
+    return s.verified === true;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -465,7 +480,7 @@ const StartupDetails = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         {/* Hero Header */}
-        <Card className="mb-6 overflow-hidden">
+        <Card className="mb-6 overflow-hidden glass-card">
           <div className="bg-gradient-to-r from-primary/10 via-sky/10 to-primary/5 p-6 sm:p-8 relative">
             {/* University Badge - Top Right */}
             {founderUniversity && (
@@ -514,7 +529,12 @@ const StartupDetails = () => {
 
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold">{startup.name}</h1>
+                  <div className="flex items-center gap-2 justify-center sm:justify-start">
+                    <h1 className="text-2xl sm:text-3xl font-bold">{startup.name}</h1>
+                    {isVerified(startup) && (
+                      <VerifiedBadge size="md" />
+                    )}
+                  </div>
                   {startup.stage && (
                     <Badge className={`${getStageInfo(startup.stage).color} border`}>
                       {getStageInfo(startup.stage).label}
@@ -611,7 +631,7 @@ const StartupDetails = () => {
 
         {/* Edit Form */}
         {isEditing && isOwner && (
-          <Card className="mb-6">
+          <Card className="mb-6 glass-card">
             <CardHeader>
               <CardTitle>Edit Startup Details</CardTitle>
             </CardHeader>
@@ -823,7 +843,7 @@ const StartupDetails = () => {
 
         {/* About Section */}
         {startup.description && (
-          <Card className="mb-6">
+          <Card className="mb-6 glass-card">
             <CardHeader>
               <CardTitle className="text-lg">About</CardTitle>
             </CardHeader>
@@ -835,7 +855,7 @@ const StartupDetails = () => {
 
         {/* Funding Progress */}
         {startup.funding_goal && (
-          <Card className="mb-6">
+          <Card className="mb-6 glass-card">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
@@ -880,7 +900,7 @@ const StartupDetails = () => {
 
         {/* Founder Card */}
         {founder && (
-          <Card className="mb-6">
+          <Card className="mb-6 glass-card">
             <CardHeader>
               <CardTitle className="text-lg">Founder</CardTitle>
             </CardHeader>
@@ -930,7 +950,7 @@ const StartupDetails = () => {
 
           <TabsContent value="pitches" className="mt-4">
             {pitches.length === 0 ? (
-              <Card>
+              <Card className="glass-card">
                 <CardContent className="py-12 text-center">
                   <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                   <h3 className="font-semibold mb-2">No pitches yet</h3>
@@ -1014,7 +1034,7 @@ const StartupDetails = () => {
               {/* Founder */}
               {founder && (
                 <Card 
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className="cursor-pointer glass-card hover:shadow-md transition-shadow"
                   onClick={() => navigate(`/dashboard/profile/${founder.user_id}`)}
                 >
                   <CardContent className="py-4">
@@ -1037,7 +1057,7 @@ const StartupDetails = () => {
               {teamMembers.map((member) => (
                 <Card 
                   key={member.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className="cursor-pointer glass-card hover:bg-white/5 transition-all"
                   onClick={() => navigate(`/dashboard/profile/${member.user_id}`)}
                 >
                   <CardContent className="py-4">

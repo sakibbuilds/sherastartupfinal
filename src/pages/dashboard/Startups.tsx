@@ -23,7 +23,8 @@ import {
   ChevronUp,
   DollarSign,
   Briefcase,
-  Layers
+  Layers,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -50,6 +51,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+
 interface University {
   id: string;
   name: string;
@@ -70,6 +73,7 @@ interface Startup {
   looking_for: string[] | null;
   founder_id: string;
   created_at: string;
+  verified?: boolean;
   founder?: {
     full_name: string;
     avatar_url: string | null;
@@ -331,6 +335,10 @@ const Startups = () => {
 
   const hasActiveFilters = filterStage || filterIndustry || filterUniversity || filterInvestment;
 
+  const isVerified = (startup: Startup) => {
+    return startup.verified === true;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -354,7 +362,7 @@ const Startups = () => {
           placeholder="Search startups..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 bg-card"
+          className="pl-9 bg-white/5 border-white/10 focus:border-primary"
         />
       </div>
 
@@ -731,7 +739,7 @@ const Startups = () => {
                     transition={{ delay: index * 0.05 }}
                   >
                     <Card 
-                      className="h-full hover:shadow-md transition-shadow cursor-pointer"
+                      className="h-full glass-card hover:bg-white/5 transition-all cursor-pointer"
                       onClick={() => navigate(`/dashboard/startups/${startup.id}`)}
                     >
                       <CardHeader className="pb-3">
@@ -745,7 +753,12 @@ const Startups = () => {
                               )}
                             </div>
                             <div>
-                              <CardTitle className="text-lg">{startup.name}</CardTitle>
+                              <div className="flex items-center gap-1.5">
+                                <CardTitle className="text-lg">{startup.name}</CardTitle>
+                                {isVerified(startup) && (
+                                  <VerifiedBadge size="sm" />
+                                )}
+                              </div>
                               {startup.industry && (
                                 <p className="text-sm text-muted-foreground">{startup.industry}</p>
                               )}

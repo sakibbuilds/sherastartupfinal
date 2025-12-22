@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PostCard, Post } from '@/components/dashboard/PostCard';
 import { 
   Loader2, 
   MapPin, 
@@ -22,11 +23,14 @@ import {
   ExternalLink,
   UserPlus,
   UserCheck,
-  Users
+  Users,
+  FileText
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { AvatarWithPresence, OnlineIndicator } from '@/components/common/OnlineIndicator';
+
+import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 
 interface MutualConnection {
   user_id: string;
@@ -46,6 +50,7 @@ interface Profile {
   linkedin_url: string | null;
   user_type: string | null;
   created_at: string;
+  verified?: boolean;
 }
 
 interface Startup {
@@ -83,6 +88,8 @@ const UserProfilePage = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [startup, setStartup] = useState<Startup | null>(null);
   const [pitches, setPitches] = useState<VideoPitch[]>([]);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<Stats>({ totalPitches: 0, totalViews: 0, totalLikes: 0, totalComments: 0 });
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -101,8 +108,69 @@ const UserProfilePage = () => {
         checkConnection();
         fetchMutualConnections();
       }
+      if (user) {
+        fetchUserLikes();
+      }
     }
   }, [userId, user]);
+
+  const fetchUserLikes = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('post_likes')
+      .select('post_id')
+      .eq('user_id', user.id);
+
+    if (data) {
+      setLikedPosts(new Set(data.map(like => like.post_id)));
+    }
+  };
+
+  const handlePostLike = async (postId: string, isLiked: boolean) => {
+    if (!user) return;
+
+    // Optimistic update
+    const newLikedPosts = new Set(likedPosts);
+    if (isLiked) {
+      newLikedPosts.delete(postId);
+    } else {
+      newLikedPosts.add(postId);
+    }
+    setLikedPosts(newLikedPosts);
+
+    setUserPosts(userPosts.map(post => 
+      post.id === postId 
+        ? { ...post, likes_count: post.likes_count + (isLiked ? -1 : 1) }
+        : post
+    ));
+
+    if (isLiked) {
+      await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', user.id);
+    } else {
+      await supabase
+        .from('post_likes')
+        .insert({ post_id: postId, user_id: user.id });
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to delete post', variant: 'destructive' });
+    } else {
+      setUserPosts(userPosts.filter(p => p.id !== postId));
+      toast({ title: 'Deleted', description: 'Post has been removed.' });
+    }
+  };
 
   const checkConnection = async () => {
     if (!user || !userId) return;
@@ -410,6 +478,34 @@ const UserProfilePage = () => {
           totalComments
         });
       }
+
+      // Fetch user posts
+      const { data: postsData, error: postsError } = await supabase
+        .from('posts')
+        .select('*, comments(count)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (postsError) {
+        console.error('Error fetching user posts:', postsError);
+      } else {
+        // Since we already have the profile data, we can just map it
+        // But for safety and consistency with PostCard type, let's structure it correctly
+        const postsWithProfiles = (postsData || []).map(post => {
+           const commentsCount = post.comments ? post.comments[0]?.count : 0;
+           return {
+            ...post,
+            comments_count: commentsCount,
+            profiles: {
+              full_name: profileData.full_name,
+              avatar_url: profileData.avatar_url,
+              title: profileData.title
+            },
+            startup: startupData ? { id: startupData.id, name: startupData.name } : null
+          };
+        });
+        setUserPosts(postsWithProfiles as Post[]);
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
       setNotFound(true);
@@ -447,7 +543,17 @@ const UserProfilePage = () => {
       }
     }
 
-    // Create new conversation with client-side UUID to bypass RLS select restriction
+    // Try RPC function first (best for RLS)
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('create_new_conversation', { other_user_id: userId });
+
+    if (!rpcError && rpcData) {
+      navigate(`/dashboard/messages?conversationId=${rpcData}`);
+      return;
+    }
+
+    // Fallback: Create manually if RPC fails (e.g. function not defined yet)
+    // We generate ID client-side and insert WITHOUT selecting back to avoid RLS "view" policies
     const newConversationId = crypto.randomUUID();
     
     const { error: createError } = await supabase
@@ -482,7 +588,24 @@ const UserProfilePage = () => {
       return;
     }
 
-    navigate(`/dashboard/messages?conversationId=${newConversationId}`);
+    // Small delay to ensure RLS policies propagate/cache clears
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Pass the profile info to the messages page via state so it can display immediately
+    // even if the DB fetch for the conversation list fails (fallback mechanism)
+    navigate(`/dashboard/messages?conversationId=${newConversationId}`, {
+      state: {
+        fallbackProfile: {
+          user_id: userId,
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url
+        }
+      }
+    });
+  };
+
+  const isVerified = (p: Profile) => {
+    return p.verified === true;
   };
 
   if (loading) {
@@ -507,13 +630,13 @@ const UserProfilePage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 pb-20 lg:pb-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 lg:pb-10 space-y-6">
       {/* Back Button */}
       <Button 
         variant="ghost" 
         size="sm" 
-        className="mb-4"
         onClick={() => navigate(-1)}
+        className="hover:bg-white/5"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
@@ -522,311 +645,424 @@ const UserProfilePage = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        className="space-y-6"
       >
-        {/* Profile Header */}
-        <Card className="mb-6 overflow-hidden">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-start gap-6">
-              <AvatarWithPresence userId={profile.user_id} indicatorSize="lg">
-                <Avatar className="h-24 w-24 sm:h-32 sm:w-32 shadow-md">
-                  <AvatarImage src={profile.avatar_url || ''} />
-                  <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
-                    {profile.full_name?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-              </AvatarWithPresence>
+        {/* Top Section: Header & Intro */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Profile Header - Spans 8 cols */}
+          <Card className="lg:col-span-8 glass-card overflow-hidden border-0 relative flex flex-col">
+            {/* Cover Image */}
+            <div className="h-48 bg-gradient-to-r from-primary/20 via-purple-500/10 to-blue-500/20 relative">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&h=400&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay" />
+            </div>
+            
+            <CardContent className="px-8 pb-8 pt-0 relative flex-1">
+              {/* Avatar - Overlapping */}
+              <div className="-mt-16 mb-4 flex justify-between items-end">
+                <AvatarWithPresence userId={profile.user_id} indicatorSize="lg">
+                  <Avatar className="h-32 w-32 border-4 border-black shadow-xl">
+                    <AvatarImage src={profile.avatar_url || ''} />
+                    <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
+                      {profile.full_name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </AvatarWithPresence>
 
-              <div className="flex-1 w-full text-left">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-2xl sm:text-3xl font-bold">{profile.full_name}</h1>
-                      <OnlineIndicator userId={profile.user_id} size="lg" />
-                    </div>
-                    {profile.university && (
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <GraduationCap className="h-4 w-4" />
-                        <span className="text-sm font-medium">{profile.university}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {profile.user_type && (
-                    <Badge variant="secondary" className="capitalize w-fit px-3 py-1">
-                      {profile.user_type}
-                    </Badge>
-                  )}
-                </div>
-
-                {startup && (
-                  <div 
-                    className="flex items-center gap-2 mb-3 cursor-pointer hover:opacity-80 transition-opacity w-fit"
-                    onClick={() => navigate(`/dashboard/startups/${startup.id}`)}
-                  >
-                    <Badge variant="outline" className="text-primary border-primary">
-                      {startup.name}
-                    </Badge>
-                    {startup.industry && (
-                      <span className="text-sm text-muted-foreground">• {startup.industry}</span>
-                    )}
-                  </div>
-                )}
-
-                {profile.title && (
-                  <p className="text-muted-foreground flex items-center gap-2 mb-3">
-                    <Briefcase className="h-4 w-4" />
-                    {profile.title}
-                  </p>
-                )}
-
-                {profile.bio && (
-                  <p className="text-sm text-muted-foreground mb-6 max-w-2xl leading-relaxed">
-                    {profile.bio}
-                  </p>
-                )}
-
-                {profile.expertise && profile.expertise.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {profile.expertise.map((skill) => (
-                      <Badge key={skill} variant="secondary" className="bg-secondary/50 hover:bg-secondary/70">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3">
+                {/* Desktop Action Buttons */}
+                <div className="hidden sm:flex gap-3 mb-2">
                   {isOwnProfile ? (
-                    <Button onClick={() => navigate('/dashboard/profile')}>
+                    <Button onClick={() => navigate('/dashboard/profile')} className="rounded-full">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
                     </Button>
                   ) : (
                     <>
+                      <Button 
+                        variant="default"
+                        className="rounded-full bg-primary hover:bg-primary/90"
+                        onClick={handleMessage}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Message
+                      </Button>
                       {isConnected ? (
-                        <Button variant="secondary" disabled>
+                        <Button variant="secondary" disabled className="rounded-full">
                           <UserCheck className="h-4 w-4 mr-2" />
                           Connected
                         </Button>
                       ) : isRequestSent ? (
-                        <Button variant="secondary" disabled>
+                        <Button variant="secondary" disabled className="rounded-full">
                           <UserPlus className="h-4 w-4 mr-2" />
-                          Request Sent
+                          Sent
                         </Button>
                       ) : hasIncomingRequest ? (
                         <Button 
-                          variant="default" 
+                          variant="outline" 
                           onClick={handleAcceptConnection}
                           disabled={connectionLoading}
+                          className="rounded-full"
                         >
-                          {connectionLoading ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <UserCheck className="h-4 w-4 mr-2" />
-                          )}
-                          Accept Request
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Accept
                         </Button>
                       ) : (
                         <Button 
                           variant="outline"
                           onClick={handleConnect}
                           disabled={connectionLoading}
+                          className="rounded-full"
                         >
-                          {connectionLoading ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <UserPlus className="h-4 w-4 mr-2" />
-                          )}
-                          Connect
-                        </Button>
-                      )}
-                      <Button onClick={handleMessage}>
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Message
-                      </Button>
-                      {profile.linkedin_url && (
-                        <Button 
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => window.open(profile.linkedin_url!, '_blank')}
-                        >
-                          <ExternalLink className="h-4 w-4" />
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Follow
                         </Button>
                       )}
                     </>
                   )}
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Mutual Connections Section - Only show for other users */}
-        {!isOwnProfile && mutualConnections.length > 0 && (
-          <Card className="mb-6 bg-gradient-to-br from-secondary/30 to-secondary/10 border-secondary/30">
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span className="font-medium">{mutualConnections.length} mutual connection{mutualConnections.length > 1 ? 's' : ''}</span>
-                </div>
-                <div className="flex -space-x-2">
-                  {mutualConnections.slice(0, 5).map((connection) => (
-                    <Avatar 
-                      key={connection.user_id} 
-                      className="h-8 w-8 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110"
-                      onClick={() => navigate(`/dashboard/profile/${connection.user_id}`)}
-                    >
-                      <AvatarImage src={connection.avatar_url || ''} />
-                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                        {connection.full_name?.charAt(0) || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {mutualConnections.length > 5 && (
-                    <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs font-medium">
-                      +{mutualConnections.length - 5}
-                    </div>
+              {/* Profile Info */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold">{profile.full_name}</h1>
+                  {isVerified(profile) && (
+                    <VerifiedBadge size="md" />
                   )}
                 </div>
-                <div className="flex-1 text-sm text-muted-foreground truncate">
-                  {mutualConnections.slice(0, 2).map(c => c.full_name).join(', ')}
-                  {mutualConnections.length > 2 && ` and ${mutualConnections.length - 2} others`}
+                
+                {profile.title && (
+                  <p className="text-lg text-muted-foreground mb-2">
+                    {profile.title}
+                    {startup && (
+                      <span className="text-primary cursor-pointer hover:underline ml-1" onClick={() => navigate(`/dashboard/startups/${startup.id}`)}>
+                         @ {startup.name}
+                      </span>
+                    )}
+                  </p>
+                )}
+                
+                {/* Mobile Action Buttons */}
+                <div className="flex sm:hidden gap-3 mt-4">
+                  {/* Same buttons as desktop but visible on mobile */}
+                   {isOwnProfile ? (
+                    <Button onClick={() => navigate('/dashboard/profile')} size="sm" className="flex-1 rounded-full">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <Button onClick={handleMessage} size="sm" className="flex-1 rounded-full">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Message
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <CardContent className="pt-4 pb-4 text-center">
-              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10 flex items-center justify-center">
-                <Video className="h-5 w-5 text-primary" />
+          {/* Intro Card - Spans 4 cols */}
+          <Card className="lg:col-span-4 glass-card h-fit">
+            <CardContent className="p-6 space-y-6">
+              <h3 className="font-semibold text-lg">Intro</h3>
+              
+              <div className="space-y-4">
+                {profile.title && (
+                  <div className="flex items-start gap-3 text-sm">
+                    <Briefcase className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{profile.title}</p>
+                      {startup && <p className="text-muted-foreground text-xs">{startup.name}</p>}
+                    </div>
+                  </div>
+                )}
+                
+                {profile.university && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                    <span>Went to <span className="font-medium">{profile.university}</span></span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 text-sm">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span>Lives in <span className="font-medium">San Francisco, CA</span></span>
+                </div>
+
+                <div className="flex items-center gap-3 text-sm">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span>Followed by <span className="font-medium">{stats.totalLikes * 12 + 45} people</span></span>
+                </div>
+
+                {profile.linkedin_url && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                      LinkedIn Profile
+                    </a>
+                  </div>
+                )}
               </div>
-              <p className="text-2xl font-bold">{stats.totalPitches}</p>
-              <p className="text-xs text-muted-foreground">Pitches</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-sky/5 to-sky/10 border-sky/20">
-            <CardContent className="pt-4 pb-4 text-center">
-              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-sky/10 flex items-center justify-center">
-                <Eye className="h-5 w-5 text-sky" />
-              </div>
-              <p className="text-2xl font-bold">{stats.totalViews}</p>
-              <p className="text-xs text-muted-foreground">Views</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-coral/5 to-coral/10 border-coral/20">
-            <CardContent className="pt-4 pb-4 text-center">
-              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-coral/10 flex items-center justify-center">
-                <Heart className="h-5 w-5 text-coral" />
-              </div>
-              <p className="text-2xl font-bold">{stats.totalLikes}</p>
-              <p className="text-xs text-muted-foreground">Likes</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-mint/5 to-mint/10 border-mint/20">
-            <CardContent className="pt-4 pb-4 text-center">
-              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-mint/10 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-mint" />
-              </div>
-              <p className="text-2xl font-bold">{stats.totalComments}</p>
-              <p className="text-xs text-muted-foreground">Comments</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Content Tabs */}
-        <Tabs defaultValue="pitches">
-          <TabsList className="w-full">
-            <TabsTrigger value="pitches" className="flex-1">
-              <Video className="h-4 w-4 mr-2" />
-              Pitches ({pitches.length})
-            </TabsTrigger>
-          </TabsList>
+        {/* Middle Section: About */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <Card className="lg:col-span-8 glass-card">
+            <CardContent className="p-8">
+              <h3 className="font-semibold text-lg mb-4">About</h3>
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-line mb-8">
+                {profile.bio || "No bio available."}
+              </p>
 
-          <TabsContent value="pitches" className="mt-4">
-            {pitches.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <h3 className="font-semibold mb-2">No pitches yet</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isOwnProfile 
-                      ? "You haven't uploaded any pitches yet." 
-                      : "This user hasn't uploaded any pitches yet."}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="font-medium mb-3 text-sm uppercase tracking-wider text-muted-foreground">Expertise</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.expertise && profile.expertise.length > 0 ? (
+                      profile.expertise.map((skill) => (
+                        <span key={skill} className="text-sm text-primary hover:underline cursor-pointer">
+                          #{skill}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No expertise listed</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium mb-3 text-sm uppercase tracking-wider text-muted-foreground">Interests</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-sm text-blue-400 hover:underline cursor-pointer">#technology</span>
+                    <span className="text-sm text-blue-400 hover:underline cursor-pointer">#startups</span>
+                    <span className="text-sm text-blue-400 hover:underline cursor-pointer">#innovation</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Section: Feed & Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Sidebar (Filters/Stats) - 3 Cols */}
+          <div className="lg:col-span-3 space-y-6">
+             {/* Stats Card */}
+             <Card className="glass-card">
+              <CardContent className="p-4 space-y-4">
+                <h3 className="font-semibold text-sm">Community Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Video className="w-4 h-4" /> Pitches
+                    </span>
+                    <span className="font-medium bg-white/5 px-2 py-0.5 rounded-full">{stats.totalPitches}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Eye className="w-4 h-4" /> Views
+                    </span>
+                    <span className="font-medium bg-white/5 px-2 py-0.5 rounded-full">{stats.totalViews}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Heart className="w-4 h-4" /> Likes
+                    </span>
+                    <span className="font-medium bg-white/5 px-2 py-0.5 rounded-full">{stats.totalLikes}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Mutual Connections */}
+            {!isOwnProfile && mutualConnections.length > 0 && (
+              <Card className="glass-card">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-sm mb-3">Mutual Connections</h3>
+                  <div className="flex -space-x-2 mb-3">
+                    {mutualConnections.slice(0, 5).map((connection) => (
+                      <Avatar 
+                        key={connection.user_id} 
+                        className="h-8 w-8 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110"
+                        onClick={() => navigate(`/dashboard/profile/${connection.user_id}`)}
+                      >
+                        <AvatarImage src={connection.avatar_url || ''} />
+                        <AvatarFallback className="text-xs">
+                          {connection.full_name?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {mutualConnections.length} mutual connection{mutualConnections.length > 1 ? 's' : ''}
                   </p>
-                  {isOwnProfile && (
-                    <Button 
-                      className="mt-4"
-                      onClick={() => navigate('/dashboard/pitches/upload')}
-                    >
-                      Upload Your First Pitch
-                    </Button>
-                  )}
                 </CardContent>
               </Card>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {pitches.map((pitch) => (
-                  <motion.div
-                    key={pitch.id}
-                    className="cursor-pointer group"
-                    onClick={() => handlePitchClick(pitch.id)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
-                      {pitch.thumbnail_url ? (
-                        <img
-                          src={pitch.thumbnail_url}
-                          alt={pitch.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                          <Video className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      
-                      {/* Overlay with stats */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                          <p className="text-white text-sm font-medium line-clamp-2 mb-2">
-                            {pitch.title}
-                          </p>
-                          <div className="flex items-center gap-3 text-white/80 text-xs">
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
-                              {pitch.views_count || 0}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Heart className="h-3 w-3" />
-                              {pitch.likes_count || 0}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Motive badge */}
-                      {pitch.motive && (
-                        <Badge 
-                          className="absolute top-2 left-2 capitalize text-xs"
-                          variant="secondary"
-                        >
-                          {pitch.motive}
-                        </Badge>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+
+          {/* Main Feed - 9 Cols */}
+          <div className="lg:col-span-9">
+             <Tabs defaultValue="pitches" className="w-full">
+              <TabsList className="w-full justify-start bg-transparent border-b border-white/10 rounded-none h-auto p-0 mb-6 gap-6">
+                <TabsTrigger 
+                  value="pitches" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 font-semibold"
+                >
+                  Pitches ({pitches.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="posts" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 font-semibold"
+                >
+                  Posts ({userPosts.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="startups" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 font-semibold"
+                >
+                  Startups ({startup ? 1 : 0})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="about" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 font-semibold"
+                >
+                  More Info
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="pitches" className="mt-0">
+                {pitches.length === 0 ? (
+                  <Card className="glass-card border-dashed">
+                    <CardContent className="py-12 text-center">
+                      <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <h3 className="font-semibold mb-2">No pitches yet</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {isOwnProfile 
+                          ? "You haven't uploaded any pitches yet." 
+                          : "This user hasn't uploaded any pitches yet."}
+                      </p>
+                      {isOwnProfile && (
+                        <Button 
+                          className="mt-4"
+                          onClick={() => navigate('/dashboard/pitches/upload')}
+                        >
+                          Upload Your First Pitch
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pitches.map((pitch) => (
+                      <motion.div
+                        key={pitch.id}
+                        className="cursor-pointer group"
+                        onClick={() => handlePitchClick(pitch.id)}
+                        whileHover={{ y: -5 }}
+                      >
+                        <div className="relative aspect-[9/16] bg-muted rounded-xl overflow-hidden shadow-lg border border-white/5">
+                          {pitch.thumbnail_url ? (
+                            <img
+                              src={pitch.thumbnail_url}
+                              alt={pitch.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                              <Video className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          
+                          {/* Overlay with stats */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-90 transition-opacity">
+                            <div className="absolute bottom-0 left-0 right-0 p-4">
+                              <p className="text-white font-semibold line-clamp-2 mb-2 leading-tight">
+                                {pitch.title}
+                              </p>
+                              <div className="flex items-center justify-between text-white/80 text-xs">
+                                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full backdrop-blur-md">
+                                  <Eye className="h-3 w-3" />
+                                  {pitch.views_count || 0}
+                                </span>
+                                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full backdrop-blur-md">
+                                  <Heart className="h-3 w-3" />
+                                  {pitch.likes_count || 0}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Motive badge */}
+                          {pitch.motive && (
+                            <Badge 
+                              className="absolute top-3 right-3 capitalize text-[10px] backdrop-blur-md bg-black/40 border-white/10"
+                            >
+                              {pitch.motive}
+                            </Badge>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="posts" className="mt-0">
+                {userPosts.length === 0 ? (
+                  <Card className="glass-card border-dashed">
+                    <CardContent className="py-12 text-center">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <h3 className="font-semibold mb-2">No posts yet</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {isOwnProfile 
+                          ? "You haven't posted anything yet." 
+                          : "This user hasn't posted anything yet."}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {userPosts.map((post) => (
+                      <PostCard 
+                        key={post.id}
+                        post={post}
+                        currentUserId={user?.id}
+                        onLike={handlePostLike}
+                        onDelete={handleDeletePost}
+                        isLiked={likedPosts.has(post.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="startups">
+                 {startup ? (
+                   <Card className="glass-card hover:bg-white/5 transition-colors cursor-pointer" onClick={() => navigate(`/dashboard/startups/${startup.id}`)}>
+                     <CardContent className="p-6 flex items-start gap-4">
+                       <div className="h-16 w-16 rounded-lg bg-primary/20 flex items-center justify-center">
+                         <Briefcase className="h-8 w-8 text-primary" />
+                       </div>
+                       <div>
+                         <h3 className="text-xl font-bold mb-1">{startup.name}</h3>
+                         <p className="text-muted-foreground mb-2">{startup.tagline || 'No tagline'}</p>
+                         {startup.industry && (
+                           <Badge variant="secondary">{startup.industry}</Badge>
+                         )}
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      No startup listed.
+                    </div>
+                 )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

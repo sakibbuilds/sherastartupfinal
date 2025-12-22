@@ -47,8 +47,14 @@ import {
   Play,
   ListVideo,
   Users,
-  Shield
+  Shield,
+  ArrowRight,
+  BadgeCheck,
+  Network,
+  Search,
+  UserPlus
 } from 'lucide-react';
+import { UserBadges } from '@/components/common/UserBadges';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -96,9 +102,27 @@ const navItems: NavItem[] = [
       { icon: Plus, label: 'Upload Pitch', path: '/dashboard/pitches/upload' },
     ]
   },
-  { icon: Heart, label: 'Match', path: '/dashboard/match' },
+  { 
+    icon: Network, 
+    label: 'Network', 
+    path: '/dashboard/network',
+    submenu: [
+      { icon: Search, label: 'Find Connections', path: '/dashboard/network' },
+      { icon: Users, label: 'My Connections', path: '/dashboard/network/connections' },
+      { icon: UserPlus, label: 'Connection Requests', path: '/dashboard/network/requests' },
+    ]
+  },
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
-  { icon: Calendar, label: 'Bookings', path: '/dashboard/bookings' },
+  { 
+    icon: Calendar, 
+    label: 'Mentorship', 
+    path: '/dashboard/mentorship',
+    submenu: [
+      { icon: Users, label: 'My Mentors', path: '/dashboard/mentorship' },
+      { icon: Users, label: 'Find a Mentor', path: '/dashboard/mentorship/find' },
+      { icon: Check, label: 'Become a Mentor', path: '/dashboard/mentorship/become' },
+    ]
+  },
   { icon: Building2, label: 'Startups', path: '/dashboard/startups' },
   { icon: Users, label: 'Founders', path: '/dashboard/founders' },
   { icon: TrendingUp, label: 'Investors', path: '/dashboard/investors' },
@@ -114,7 +138,8 @@ const DashboardLayout = () => {
     return saved ? JSON.parse(saved) : false;
   });
   const [openSubmenu, setOpenSubmenu] = useState<string | null>('Pitches');
-  const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null; user_type: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null; user_type: string | null; verified?: boolean; is_mentor?: boolean } | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<'none' | 'pending' | 'rejected'>('none');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [recentMessages, setRecentMessages] = useState<Message[]>([]);
@@ -125,6 +150,48 @@ const DashboardLayout = () => {
   useEffect(() => {
     if (user) {
       checkAdminRole();
+      // Fetch verified status along with role
+      const fetchVerifiedStatus = async () => {
+        // 1. Get profile verification and mentor status
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching profile:', error);
+          // Only redirect to onboarding if specifically no rows found (profile doesn't exist)
+          if (error.code === 'PGRST116') {
+             navigate('/onboarding');
+          }
+        } else if (profileData) {
+          setProfile(profileData);
+          if (!profileData.onboarding_completed) {
+            navigate('/onboarding');
+          }
+        }
+
+        // 2. Check for pending requests if not verified
+        if (profileData && !profileData.verified) {
+           const { data: requestData } = await supabase
+            .from('verification_requests')
+            .select('status')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (requestData) {
+            setVerificationStatus(requestData.status as any);
+          } else {
+             // Fallback to local storage check for immediate feedback
+             const isPending = localStorage.getItem(`verification_pending_${user.id}`);
+             if (isPending === 'true') setVerificationStatus('pending');
+          }
+        }
+      };
+      fetchVerifiedStatus();
     }
   }, [user]);
 
@@ -148,22 +215,22 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     if (user) {
-      const fetchProfile = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url, title, onboarding_completed, user_type')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (data) {
-          setProfile(data);
-          if (!data.onboarding_completed) {
-            navigate('/onboarding');
-          }
-        } else {
-          navigate('/onboarding');
-        }
-      };
+      // const fetchProfile = async () => {
+      //   const { data } = await supabase
+      //     .from('profiles')
+      //     .select('full_name, avatar_url, title, onboarding_completed, user_type')
+      //     .eq('user_id', user.id)
+      //     .single();
+      //   
+      //   if (data) {
+      //     setProfile(data);
+      //     if (!data.onboarding_completed) {
+      //       navigate('/onboarding');
+      //     }
+      //   } else {
+      //     navigate('/onboarding');
+      //   }
+      // };
 
       const fetchNotifications = async () => {
         const { data } = await supabase
@@ -214,7 +281,7 @@ const DashboardLayout = () => {
         }
       };
 
-      fetchProfile();
+      // fetchProfile();
       fetchNotifications();
       fetchRecentMessages();
 
@@ -317,10 +384,10 @@ const DashboardLayout = () => {
           navigate('/dashboard/messages');
           break;
         case 'booking':
-          navigate('/dashboard/bookings');
+          navigate('/dashboard/mentorship');
           break;
         case 'match':
-          navigate('/dashboard/match');
+          navigate('/dashboard/network');
           break;
         case 'profile':
           navigate(`/dashboard/profile/${notification.reference_id}`);
@@ -340,10 +407,10 @@ const DashboardLayout = () => {
           navigate('/dashboard/messages');
           break;
         case 'booking':
-          navigate('/dashboard/bookings');
+          navigate('/dashboard/mentorship');
           break;
         case 'match':
-          navigate('/dashboard/match');
+          navigate('/dashboard/network');
           break;
         default:
           navigate('/dashboard');
@@ -391,29 +458,70 @@ const DashboardLayout = () => {
     });
   }
 
+  // Add Verification Request item if not verified
+  // if (profile && !profile.verified && profile.user_type !== 'admin') {
+  //    displayedNavItems.push({
+  //     icon: BadgeCheck,
+  //     label: 'Get Verified',
+  //     path: '/dashboard/settings',
+  //   });
+  // }
+
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen flex bg-transparent">
       {/* Desktop Sidebar */}
       <aside 
         className={cn(
-          "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 border-r border-border bg-card transition-all duration-300",
+          "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 border-r border-white/10 bg-black/20 backdrop-blur-xl transition-all duration-300 z-50",
           sidebarCollapsed ? "lg:w-16" : "lg:w-64"
         )}
       >
         <div 
           className={cn(
-            "flex items-center gap-2 px-4 py-4 border-b border-border cursor-pointer",
+            "flex items-center gap-3 px-4 h-16 border-b border-border/50 relative group",
             sidebarCollapsed && "justify-center px-2"
           )}
-          onClick={() => navigate('/dashboard')}
         >
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
-            <Rocket className="h-5 w-5 text-primary-foreground" />
+          <div 
+             className="flex items-center gap-3 cursor-pointer w-full"
+             onClick={() => navigate('/dashboard')}
+          >
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center flex-shrink-0 text-white">
+              <Rocket className="h-5 w-5" />
+            </div>
+            {!sidebarCollapsed && <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600 ml-4">CampusLaunch</span>}
           </div>
-          {!sidebarCollapsed && <span className="text-lg font-bold">CampusLaunch</span>}
-        </div>
 
-        <nav className={cn("flex-1 py-6 space-y-1 overflow-y-auto", sidebarCollapsed ? "px-2" : "px-3")}>
+          {!sidebarCollapsed && (
+            <Button
+              variant="secondary" 
+              size="icon"
+              className="h-6 w-6 absolute -right-3 top-1/2 -translate-y-1/2 rounded-full shadow-md border border-white/10 bg-background z-50"
+              onClick={(e) => {
+                 e.stopPropagation();
+                 setSidebarCollapsed(true);
+              }}
+            >
+              <ChevronLeft className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+        
+        {/* Collapsed State Expand Button - positioned absolutely to overlap border */}
+        {sidebarCollapsed && (
+           <div className="absolute left-1/2 -translate-x-1/2 top-8 -translate-y-1/2 z-50">
+             <Button
+                variant="secondary"
+                size="icon"
+                className="h-6 w-6 rounded-full shadow-md border border-white/10 bg-background"
+                onClick={() => setSidebarCollapsed(false)}
+             >
+               <ChevronRight className="h-3 w-3" />
+             </Button>
+           </div>
+        )}
+
+        <nav className={cn("flex-1 py-6 space-y-1.5 overflow-y-auto", sidebarCollapsed ? "px-2" : "px-3")}>
           {displayedNavItems.map((item) => (
             item.submenu ? (
               <HoverCard key={item.path} openDelay={0} closeDelay={100}>
@@ -540,20 +648,35 @@ const DashboardLayout = () => {
                 >
                   <div className="space-y-1">
                     <div className="px-2 py-1.5 text-sm font-semibold text-foreground/70 border-b border-border mb-1">
-                      Admin Panel
+                      Mentorship
                     </div>
                     <Button
-                      variant={location.pathname === '/dashboard/admin/mentorships' ? 'default' : 'ghost'}
+                      variant={location.pathname === '/dashboard/admin/mentorships/requests' ? 'default' : 'ghost'}
                       size="sm"
                       className="w-full justify-start gap-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate('/dashboard/admin/mentorships');
+                        navigate('/dashboard/admin/mentorships/requests');
                       }}
                     >
                       <Users className="h-4 w-4" />
-                      Mentorships
+                      Requests
                     </Button>
+                    <Button
+                      variant={location.pathname === '/dashboard/admin/mentorships/all' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start gap-3"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/dashboard/admin/mentorships/all');
+                      }}
+                    >
+                      <Check className="h-4 w-4" />
+                      All Mentors
+                    </Button>
+                    <div className="px-2 py-1.5 text-sm font-semibold text-foreground/70 border-b border-border mb-1 mt-2">
+                      Management
+                    </div>
                     <Button
                       variant={location.pathname === '/dashboard/admin/advertisements' ? 'default' : 'ghost'}
                       size="sm"
@@ -573,24 +696,34 @@ const DashboardLayout = () => {
           )}
         </nav>
 
-        {/* Collapse Toggle */}
-        <div className="p-2 border-t border-border">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Collapse
-              </>
-            )}
-          </Button>
-        </div>
+        {profile && !profile.verified && profile.user_type !== 'admin' && (
+          <div className={cn("px-3 pb-2", sidebarCollapsed && "px-2")}>
+             <Button
+              variant="default"
+              disabled={verificationStatus === 'pending'}
+              className={cn(
+                'w-full justify-between group relative overflow-hidden transition-all duration-300',
+                verificationStatus === 'pending' 
+                  ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500/20'
+                  : 'bg-primary text-white hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 border border-primary/20',
+                sidebarCollapsed && 'justify-center px-2'
+              )}
+              onClick={() => navigate('/dashboard/settings?tab=verification')}
+            >
+              <div className="flex items-center gap-3">
+                {verificationStatus === 'pending' ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <BadgeCheck className="h-5 w-5" />
+                )}
+                {!sidebarCollapsed && <span>{verificationStatus === 'pending' ? 'Pending...' : 'Get Verified'}</span>}
+              </div>
+              {!sidebarCollapsed && verificationStatus !== 'pending' && (
+                <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform duration-300" />
+              )}
+            </Button>
+          </div>
+        )}
 
         <div className={cn("p-4 border-t border-border", sidebarCollapsed && "p-2")}>
           <DropdownMenu>
@@ -602,7 +735,10 @@ const DashboardLayout = () => {
                 </Avatar>
                 {!sidebarCollapsed && (
                   <div className="flex flex-col items-start text-left min-w-0">
-                    <span className="truncate text-sm font-medium">{profile?.full_name || 'User'}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="truncate text-sm font-medium">{profile?.full_name || 'User'}</span>
+                      <UserBadges verified={profile?.verified} isMentor={profile?.is_mentor} size="sm" />
+                    </div>
                     {profile?.title && (
                       <span className="text-xs text-muted-foreground truncate">{profile.title}</span>
                     )}
@@ -632,17 +768,17 @@ const DashboardLayout = () => {
       {/* Desktop Header (right of sidebar) */}
       <header 
         className={cn(
-          "hidden lg:flex items-center justify-end h-16 px-6 border-b border-border bg-card fixed top-0 right-0 z-40 transition-all duration-300",
+          "hidden lg:flex items-center justify-end h-16 px-6 border-b border-white/10 bg-black/20 backdrop-blur-xl fixed top-0 right-0 z-40 transition-all duration-300",
           sidebarCollapsed ? "left-16" : "left-64"
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Online Users Count */}
           {onlineCount > 1 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-mint/10 text-mint text-sm">
-                  <span className="w-2 h-2 rounded-full bg-mint animate-pulse" />
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-mint/10 to-emerald-500/10 border border-mint/20 text-mint text-sm shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-mint animate-pulse shadow-[0_0_8px_rgba(var(--mint),0.5)]" />
                   <Users className="h-4 w-4" />
                   <span className="font-medium">{onlineCount}</span>
                 </div>
@@ -665,8 +801,8 @@ const DashboardLayout = () => {
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 bg-popover">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <DropdownMenuContent align="end" className="w-80 glass-card border-white/10">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                 <span className="font-semibold">Notifications</span>
                 {unreadNotifications > 0 && (
                   <Button 
@@ -691,7 +827,7 @@ const DashboardLayout = () => {
                     <div
                       key={notification.id}
                       className={cn(
-                        'px-4 py-3 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 transition-colors',
+                        'px-4 py-3 border-b border-white/10 last:border-0 cursor-pointer hover:bg-white/5 transition-colors',
                         !notification.is_read && 'bg-primary/5'
                       )}
                       onClick={() => handleNotificationClick(notification)}
@@ -785,9 +921,12 @@ const DashboardLayout = () => {
                   <AvatarImage src={profile?.avatar_url || ''} />
                   <AvatarFallback>{profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium truncate max-w-[120px]">
-                  {profile?.full_name || 'User'}
-                </span>
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className="text-sm font-medium truncate max-w-[120px]">
+                    {profile?.full_name || 'User'}
+                  </span>
+                  <UserBadges verified={profile?.verified} isMentor={profile?.is_mentor} size="sm" />
+                </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover">
@@ -814,14 +953,16 @@ const DashboardLayout = () => {
       </header>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
+        <div className="flex items-center justify-between px-4 h-16">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <AlignLeft className="h-6 w-6" />
           </Button>
           <div className="flex items-center gap-2">
-            <Rocket className="h-5 w-5 text-primary" />
-            <span className="font-bold">CampusLaunch</span>
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-purple-600 shadow-sm">
+              <Rocket className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">CampusLaunch</span>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/dashboard/messages')}>
@@ -860,12 +1001,14 @@ const DashboardLayout = () => {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed inset-y-0 left-0 w-72 bg-card z-50 flex flex-col"
+              className="lg:hidden fixed inset-y-0 left-0 w-72 bg-black/40 backdrop-blur-xl border-r border-white/10 z-50 flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                 <div className="flex items-center gap-2">
-                  <Rocket className="h-6 w-6 text-primary" />
-                  <span className="font-bold">CampusLaunch</span>
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-purple-600 shadow-sm">
+                    <Rocket className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">CampusLaunch</span>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                   <X className="h-5 w-5" />
@@ -879,7 +1022,10 @@ const DashboardLayout = () => {
                     <AvatarFallback>{profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{profile?.full_name || 'User'}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="font-medium">{profile?.full_name || 'User'}</p>
+                      <UserBadges verified={profile?.verified} isMentor={profile?.is_mentor} size="sm" />
+                    </div>
                     <p className="text-sm text-muted-foreground">{profile?.title || 'Member'}</p>
                   </div>
                 </div>
@@ -999,7 +1145,7 @@ const DashboardLayout = () => {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-lg border-t border-border/40 z-40 pb-safe">
         <div className="flex items-center justify-around py-2">
           {navItems.filter(item => !item.submenu).slice(0, 4).map((item) => (
             <Button
