@@ -25,14 +25,12 @@ import {
 import { 
   Home, 
   MessageSquare, 
-  Heart, 
   Calendar, 
   Bell, 
   Settings, 
   LogOut, 
   AlignLeft, 
   X,
-  Rocket,
   User,
   Loader2,
   Building2,
@@ -90,43 +88,66 @@ interface Message {
   };
 }
 
-const navItems: NavItem[] = [
-  { icon: Home, label: 'Feed', path: '/dashboard' },
-  { 
-    icon: Video, 
-    label: 'Pitches', 
-    path: '/dashboard/pitches',
-    submenu: [
-      { icon: Play, label: 'Browse Pitches', path: '/dashboard/pitches' },
-      { icon: ListVideo, label: 'My Pitches', path: '/dashboard/pitches/my' },
-      { icon: Plus, label: 'Upload Pitch', path: '/dashboard/pitches/upload' },
+interface NavSection {
+  title?: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    title: "Home Pages",
+    items: [
+      { icon: Home, label: 'Feed', path: '/dashboard' }
     ]
   },
-  { 
-    icon: Network, 
-    label: 'Network', 
-    path: '/dashboard/network',
-    submenu: [
-      { icon: Search, label: 'Find Connections', path: '/dashboard/network' },
-      { icon: Users, label: 'My Connections', path: '/dashboard/network/connections' },
-      { icon: UserPlus, label: 'Connection Requests', path: '/dashboard/network/requests' },
+  {
+    title: "Community",
+    items: [
+      { 
+        icon: Network, 
+        label: 'Network', 
+        path: '/dashboard/network',
+        submenu: [
+          { icon: Search, label: 'Find Connections', path: '/dashboard/network' },
+          { icon: Users, label: 'My Connections', path: '/dashboard/network/connections' },
+          { icon: UserPlus, label: 'Connection Requests', path: '/dashboard/network/requests' },
+        ]
+      },
+      { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
+      { icon: Users, label: 'Founders', path: '/dashboard/founders' },
+      { icon: Building2, label: 'Startups', path: '/dashboard/startups' },
+      { icon: TrendingUp, label: 'Investors', path: '/dashboard/investors' },
     ]
   },
-  { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
-  { 
-    icon: Calendar, 
-    label: 'Mentorship', 
-    path: '/dashboard/mentorship',
-    submenu: [
-      { icon: Users, label: 'My Mentors', path: '/dashboard/mentorship' },
-      { icon: Users, label: 'Find a Mentor', path: '/dashboard/mentorship/find' },
-      { icon: Check, label: 'Become a Mentor', path: '/dashboard/mentorship/become' },
+  {
+    title: "Growth",
+    items: [
+      { 
+        icon: Video, 
+        label: 'Pitches', 
+        path: '/dashboard/pitches',
+        submenu: [
+          { icon: Play, label: 'Browse Pitches', path: '/dashboard/pitches' },
+          { icon: ListVideo, label: 'My Pitches', path: '/dashboard/pitches/my' },
+          { icon: Plus, label: 'Upload Pitch', path: '/dashboard/pitches/upload' },
+        ]
+      },
+      { 
+        icon: Calendar, 
+        label: 'Mentorship', 
+        path: '/dashboard/mentorship',
+        submenu: [
+          { icon: Users, label: 'My Mentors', path: '/dashboard/mentorship' },
+          { icon: Users, label: 'Find a Mentor', path: '/dashboard/mentorship/find' },
+          { icon: Check, label: 'Become a Mentor', path: '/dashboard/mentorship/become' },
+        ]
+      },
     ]
-  },
-  { icon: Building2, label: 'Startups', path: '/dashboard/startups' },
-  { icon: Users, label: 'Founders', path: '/dashboard/founders' },
-  { icon: TrendingUp, label: 'Investors', path: '/dashboard/investors' },
+  }
 ];
+
+// Flattened items for mobile/utility use
+const navItems = navSections.flatMap(section => section.items);
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -137,7 +158,7 @@ const DashboardLayout = () => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>('Pitches');
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null; title: string | null; user_type: string | null; verified?: boolean; is_mentor?: boolean } | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<'none' | 'pending' | 'rejected'>('none');
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -147,6 +168,18 @@ const DashboardLayout = () => {
   const { onlineCount } = usePresence();
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const [showFabMenu, setShowFabMenu] = useState(false);
+
+  const handleFabClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowFabMenu(!showFabMenu);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => setShowFabMenu(false);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
   useEffect(() => {
     if (user) {
       checkAdminRole();
@@ -215,23 +248,6 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     if (user) {
-      // const fetchProfile = async () => {
-      //   const { data } = await supabase
-      //     .from('profiles')
-      //     .select('full_name, avatar_url, title, onboarding_completed, user_type')
-      //     .eq('user_id', user.id)
-      //     .single();
-      //   
-      //   if (data) {
-      //     setProfile(data);
-      //     if (!data.onboarding_completed) {
-      //       navigate('/onboarding');
-      //     }
-      //   } else {
-      //     navigate('/onboarding');
-      //   }
-      // };
-
       const fetchNotifications = async () => {
         const { data } = await supabase
           .from('notifications')
@@ -281,7 +297,6 @@ const DashboardLayout = () => {
         }
       };
 
-      // fetchProfile();
       fetchNotifications();
       fetchRecentMessages();
 
@@ -449,47 +464,242 @@ const DashboardLayout = () => {
     return null;
   }
 
-  const displayedNavItems = [...navItems];
-  if (profile?.user_type === 'admin') {
-    displayedNavItems.push({
-      icon: Shield,
-      label: 'Admin',
-      path: '/dashboard/admin/mentorships',
-    });
-  }
+  const DesktopSidebarItem = ({ item, collapsed }: { item: NavItem; collapsed: boolean }) => {
+    const isActive = isPathActive(item.path, item.submenu);
+    
+    if (item.submenu) {
+      return (
+        <HoverCard openDelay={0} closeDelay={100}>
+          <HoverCardTrigger asChild>
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full h-auto py-2 px-2 rounded-xl hover:bg-secondary/50 group transition-all duration-200",
+                collapsed ? "justify-center" : "justify-start",
+                isActive && "bg-secondary/30"
+              )}
+              onClick={() => navigate(item.path)}
+            >
+              <div className={cn(
+                "w-9 h-9 rounded-lg flex items-center justify-center transition-all shadow-sm border shrink-0",
+                isActive 
+                  ? "bg-primary text-primary-foreground border-primary shadow-primary/25" 
+                  : "bg-card text-muted-foreground border-border/50 group-hover:text-foreground group-hover:bg-background group-hover:border-border"
+              )}>
+                <item.icon className="h-5 w-5" />
+              </div>
+              {!collapsed && (
+                <>
+                  <span className={cn("flex-1 text-left font-medium ml-3 text-sm", isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+                    {item.label}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                </>
+              )}
+            </Button>
+          </HoverCardTrigger>
+          <HoverCardContent 
+            side="right" 
+            align="start" 
+            className="w-56 p-2 bg-popover/95 backdrop-blur-xl border-border/50 shadow-xl" 
+            sideOffset={collapsed ? 20 : 10}
+          >
+            <div className="space-y-1">
+              <div className="px-2 py-1.5 text-sm font-semibold text-foreground/70 border-b border-border/50 mb-1">
+                {item.label}
+              </div>
+              {item.submenu.map((subItem) => (
+                <Button
+                  key={subItem.path}
+                  variant={location.pathname === subItem.path ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-3',
+                    location.pathname === subItem.path && 'bg-primary text-primary-foreground'
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(subItem.path);
+                  }}
+                >
+                  <subItem.icon className="h-4 w-4" />
+                  {subItem.label}
+                </Button>
+              ))}
+            </div>
+          </HoverCardContent>
+        </HoverCard>
+      );
+    }
 
-  // Add Verification Request item if not verified
-  // if (profile && !profile.verified && profile.user_type !== 'admin') {
-  //    displayedNavItems.push({
-  //     icon: BadgeCheck,
-  //     label: 'Get Verified',
-  //     path: '/dashboard/settings',
-  //   });
-  // }
+    return collapsed ? (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full h-auto py-2 px-2 rounded-xl hover:bg-secondary/50 group transition-all duration-200 justify-center",
+              isActive && "bg-secondary/30"
+            )}
+            onClick={() => navigate(item.path)}
+          >
+            <div className={cn(
+              "w-9 h-9 rounded-lg flex items-center justify-center transition-all shadow-sm border shrink-0",
+              isActive 
+                ? "bg-primary text-primary-foreground border-primary shadow-primary/25" 
+                : "bg-card text-muted-foreground border-border/50 group-hover:text-foreground group-hover:bg-background group-hover:border-border"
+            )}>
+              <item.icon className="h-5 w-5" />
+            </div>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    ) : (
+      <Button
+        variant="ghost"
+        className={cn(
+          "w-full h-auto py-2 px-2 rounded-xl hover:bg-secondary/50 group transition-all duration-200 justify-start",
+          isActive && "bg-secondary/30"
+        )}
+        onClick={() => navigate(item.path)}
+      >
+        <div className={cn(
+          "w-9 h-9 rounded-lg flex items-center justify-center transition-all shadow-sm border shrink-0",
+          isActive 
+            ? "bg-primary text-primary-foreground border-primary shadow-primary/25" 
+            : "bg-card text-muted-foreground border-border/50 group-hover:text-foreground group-hover:bg-background group-hover:border-border"
+        )}>
+          <item.icon className="h-5 w-5" />
+        </div>
+        <span className={cn("flex-1 text-left font-medium ml-3 text-sm", isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+          {item.label}
+        </span>
+      </Button>
+    );
+  };
+
+  const MobileSidebarItem = ({ item }: { item: NavItem }) => {
+    const isActive = isPathActive(item.path, item.submenu);
+    const isOpen = openSubmenu === item.label;
+
+    if (item.submenu) {
+      return (
+        <Collapsible
+          open={isOpen}
+          onOpenChange={(open) => setOpenSubmenu(open ? item.label : null)}
+          className="w-full"
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-between py-3 h-auto rounded-xl hover:bg-secondary/50 group transition-all duration-200",
+                isActive && "bg-secondary/30"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-9 h-9 rounded-lg flex items-center justify-center transition-all shadow-sm border shrink-0",
+                  isActive 
+                    ? "bg-primary text-primary-foreground border-primary shadow-primary/25" 
+                    : "bg-card text-muted-foreground border-border/50 group-hover:text-foreground group-hover:bg-background group-hover:border-border"
+                )}>
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <span className={cn("text-left font-medium text-sm", isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+                  {item.label}
+                </span>
+              </div>
+              <ChevronDown className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                isOpen && "transform rotate-180"
+              )} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pl-4 space-y-1 mt-1">
+            {item.submenu.map((subItem) => (
+              <Button
+                key={subItem.path}
+                variant={location.pathname === subItem.path ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-3 h-10',
+                  location.pathname === subItem.path && 'bg-primary text-primary-foreground'
+                )}
+                onClick={() => {
+                  navigate(subItem.path);
+                  setSidebarOpen(false);
+                }}
+              >
+                <subItem.icon className="h-4 w-4" />
+                {subItem.label}
+              </Button>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      );
+    }
+
+    return (
+      <Button
+        variant="ghost"
+        className={cn(
+          "w-full justify-start py-3 h-auto rounded-xl hover:bg-secondary/50 group transition-all duration-200",
+          isActive && "bg-secondary/30"
+        )}
+        onClick={() => {
+          navigate(item.path);
+          setSidebarOpen(false);
+        }}
+      >
+        <div className={cn(
+          "w-9 h-9 rounded-lg flex items-center justify-center transition-all shadow-sm border shrink-0",
+          isActive 
+            ? "bg-primary text-primary-foreground border-primary shadow-primary/25" 
+            : "bg-card text-muted-foreground border-border/50 group-hover:text-foreground group-hover:bg-background group-hover:border-border"
+        )}>
+          <item.icon className="h-5 w-5" />
+        </div>
+        <span className={cn("flex-1 text-left font-medium ml-3 text-sm", isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+          {item.label}
+        </span>
+      </Button>
+    );
+  };
 
   return (
     <div className="min-h-screen flex bg-transparent">
       {/* Desktop Sidebar */}
       <aside 
         className={cn(
-          "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 border-r border-white/10 bg-black/20 backdrop-blur-xl transition-all duration-300 z-50",
-          sidebarCollapsed ? "lg:w-16" : "lg:w-64"
+          "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 border-r border-border bg-background transition-all duration-300 z-50",
+          sidebarCollapsed ? "lg:w-20" : "lg:w-72"
         )}
       >
         <div 
           className={cn(
-            "flex items-center gap-3 px-4 h-16 border-b border-border/50 relative group",
+            "flex items-center gap-3 px-6 h-20 relative group",
             sidebarCollapsed && "justify-center px-2"
           )}
         >
           <div 
-             className="flex items-center gap-3 cursor-pointer w-full"
+             className={cn(
+               "flex items-center cursor-pointer w-full transition-all duration-300",
+               sidebarCollapsed ? "justify-center" : "justify-start px-2"
+             )}
              onClick={() => navigate('/dashboard')}
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center flex-shrink-0 text-white">
-              <Rocket className="h-5 w-5" />
-            </div>
-            {!sidebarCollapsed && <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600 ml-4">CampusLaunch</span>}
+            <img 
+              src="/logo.png" 
+              alt="SheraStartup" 
+              className={cn(
+                "object-contain transition-all duration-300",
+                sidebarCollapsed ? "h-8 w-8" : "h-10 w-auto max-w-[180px]"
+              )} 
+            />
           </div>
 
           {!sidebarCollapsed && (
@@ -521,121 +731,51 @@ const DashboardLayout = () => {
            </div>
         )}
 
-        <nav className={cn("flex-1 py-6 space-y-1.5 overflow-y-auto", sidebarCollapsed ? "px-2" : "px-3")}>
-          {displayedNavItems.map((item) => (
-            item.submenu ? (
-              <HoverCard key={item.path} openDelay={0} closeDelay={100}>
-                <HoverCardTrigger asChild>
-                  <Button
-                    variant={isPathActive(item.path, item.submenu) ? 'secondary' : 'ghost'}
-                    className={cn(
-                      'w-full',
-                      sidebarCollapsed ? 'justify-center px-2' : 'justify-between',
-                      isPathActive(item.path, item.submenu) && 'bg-secondary'
-                    )}
-                    onClick={() => navigate(item.path)}
-                  >
-                    {sidebarCollapsed ? (
-                      <item.icon className="h-5 w-5" />
-                    ) : (
-                      <>
-                        <span className="flex items-center gap-3">
-                          <item.icon className="h-5 w-5" />
-                          {item.label}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </>
-                    )}
-                  </Button>
-                </HoverCardTrigger>
-                <HoverCardContent 
-                  side="right" 
-                  align="start" 
-                  className="w-56 p-2" 
-                  sideOffset={sidebarCollapsed ? 20 : 10}
-                >
-                  <div className="space-y-1">
-                    <div className="px-2 py-1.5 text-sm font-semibold text-foreground/70 border-b border-border mb-1">
-                      {item.label}
-                    </div>
-                    {item.submenu.map((subItem) => (
-                      <Button
-                        key={subItem.path}
-                        variant={location.pathname === subItem.path ? 'default' : 'ghost'}
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-3',
-                          location.pathname === subItem.path && 'bg-primary text-primary-foreground'
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(subItem.path);
-                        }}
-                      >
-                        <subItem.icon className="h-4 w-4" />
-                        {subItem.label}
-                      </Button>
-                    ))}
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            ) : sidebarCollapsed ? (
-              <Tooltip key={item.path} delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isPathActive(item.path, item.submenu) ? 'default' : 'ghost'}
-                    size="icon"
-                    className={cn(
-                      'w-full',
-                      isPathActive(item.path, item.submenu) && 'bg-primary text-primary-foreground'
-                    )}
-                    onClick={() => navigate(item.submenu ? item.submenu[0].path : item.path)}
-                  >
-                    <item.icon className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Button
-                key={item.path}
-                variant={location.pathname === item.path ? 'default' : 'ghost'}
-                className={cn(
-                  'w-full justify-start gap-3',
-                  location.pathname === item.path && 'bg-primary text-primary-foreground'
+        <nav className={cn("flex-1 py-6 overflow-y-auto", sidebarCollapsed ? "px-2" : "px-4")}>
+          <div className="space-y-6">
+            {navSections.map((section, idx) => (
+              <div key={idx} className="space-y-1">
+                {!sidebarCollapsed && section.title && (
+                  <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 mt-2">
+                    {section.title}
+                  </h3>
                 )}
-                onClick={() => navigate(item.path)}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-              </Button>
-            )
-          ))}
+                <div className="space-y-1">
+                  {section.items.map((item) => (
+                    <DesktopSidebarItem key={item.path} item={item} collapsed={sidebarCollapsed} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
 
           {isAdmin && (
-            <div className="pt-4 mt-4 border-t border-border">
-              {!sidebarCollapsed && <p className="mb-2 px-4 text-xs font-semibold text-muted-foreground tracking-wider">ADMIN</p>}
+            <div className="mt-6 space-y-1">
+              {!sidebarCollapsed && <p className="mb-3 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>}
               <HoverCard openDelay={0} closeDelay={100}>
                 <HoverCardTrigger asChild>
                   <Button
-                    variant={location.pathname.startsWith('/dashboard/admin') ? 'secondary' : 'ghost'}
+                    variant="ghost"
                     className={cn(
-                      'w-full',
-                      sidebarCollapsed ? 'justify-center px-2' : 'justify-between',
-                      location.pathname.startsWith('/dashboard/admin') && 'bg-secondary'
+                      "w-full h-auto py-2 px-2 rounded-xl hover:bg-secondary/50 group transition-all duration-200",
+                      sidebarCollapsed ? "justify-center" : "justify-start",
+                      location.pathname.startsWith('/dashboard/admin') && "bg-secondary/30"
                     )}
                   >
-                    {sidebarCollapsed ? (
+                    <div className={cn(
+                      "w-9 h-9 rounded-lg flex items-center justify-center transition-all shadow-sm border shrink-0",
+                      location.pathname.startsWith('/dashboard/admin')
+                        ? "bg-primary text-primary-foreground border-primary shadow-primary/25" 
+                        : "bg-card text-muted-foreground border-border/50 group-hover:text-foreground group-hover:bg-background group-hover:border-border"
+                    )}>
                       <Shield className="h-5 w-5" />
-                    ) : (
+                    </div>
+                    {!sidebarCollapsed && (
                       <>
-                        <span className="flex items-center gap-3">
-                          <Shield className="h-5 w-5" />
+                        <span className={cn("flex-1 text-left font-medium ml-3 text-sm", location.pathname.startsWith('/dashboard/admin') ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
                           Admin Panel
                         </span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                       </>
                     )}
                   </Button>
@@ -747,7 +887,7 @@ const DashboardLayout = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover">
-              <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+              <DropdownMenuItem onClick={() => navigate(`/dashboard/profile/${user.id}`)}>
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
@@ -768,8 +908,8 @@ const DashboardLayout = () => {
       {/* Desktop Header (right of sidebar) */}
       <header 
         className={cn(
-          "hidden lg:flex items-center justify-end h-16 px-6 border-b border-white/10 bg-black/20 backdrop-blur-xl fixed top-0 right-0 z-40 transition-all duration-300",
-          sidebarCollapsed ? "left-16" : "left-64"
+          "hidden lg:flex items-center justify-end h-16 px-6 border-b border-border bg-background/80 backdrop-blur-md fixed top-0 right-0 z-40 transition-all duration-300",
+          sidebarCollapsed ? "left-20" : "left-72"
         )}
       >
         <div className="flex items-center gap-3">
@@ -934,7 +1074,7 @@ const DashboardLayout = () => {
                 <p className="font-medium">{profile?.full_name}</p>
                 <p className="text-xs text-muted-foreground">{profile?.title || 'Member'}</p>
               </div>
-              <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+              <DropdownMenuItem onClick={() => navigate(`/dashboard/profile/${user.id}`)}>
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
@@ -958,11 +1098,8 @@ const DashboardLayout = () => {
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <AlignLeft className="h-6 w-6" />
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-purple-600 shadow-sm">
-              <Rocket className="h-4 w-4 text-white" />
-            </div>
-            <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">CampusLaunch</span>
+          <div className="flex items-center gap-2" onClick={() => navigate('/dashboard')}>
+            <img src="/logo.png" alt="SheraStartup" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/dashboard/messages')}>
@@ -1004,11 +1141,8 @@ const DashboardLayout = () => {
               className="lg:hidden fixed inset-y-0 left-0 w-72 bg-black/40 backdrop-blur-xl border-r border-white/10 z-50 flex flex-col"
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-purple-600 shadow-sm">
-                    <Rocket className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">CampusLaunch</span>
+                <div className="flex items-center gap-2" onClick={() => navigate('/dashboard')}>
+                  <img src="/logo.png" alt="SheraStartup" className="h-8 w-auto object-contain" />
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                   <X className="h-5 w-5" />
@@ -1033,65 +1167,7 @@ const DashboardLayout = () => {
 
               <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
                 {navItems.map((item) => (
-                  item.submenu ? (
-                    <Collapsible
-                      key={item.path}
-                      open={openSubmenu === item.label}
-                      onOpenChange={(open) => setOpenSubmenu(open ? item.label : null)}
-                    >
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          variant={isPathActive(item.path, item.submenu) ? 'secondary' : 'ghost'}
-                          className="w-full justify-between"
-                        >
-                          <span className="flex items-center gap-3">
-                            <item.icon className="h-5 w-5" />
-                            {item.label}
-                          </span>
-                          <ChevronDown className={cn(
-                            "h-4 w-4 transition-transform",
-                            openSubmenu === item.label && "rotate-180"
-                          )} />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="pl-4 mt-1 space-y-1">
-                        {item.submenu.map((subItem) => (
-                          <Button
-                            key={subItem.path}
-                            variant={location.pathname === subItem.path ? 'default' : 'ghost'}
-                            size="sm"
-                            className={cn(
-                              'w-full justify-start gap-3',
-                              location.pathname === subItem.path && 'bg-primary text-primary-foreground'
-                            )}
-                            onClick={() => {
-                              navigate(subItem.path);
-                              setSidebarOpen(false);
-                            }}
-                          >
-                            <subItem.icon className="h-4 w-4" />
-                            {subItem.label}
-                          </Button>
-                        ))}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ) : (
-                    <Button
-                      key={item.path}
-                      variant={location.pathname === item.path ? 'default' : 'ghost'}
-                      className={cn(
-                        'w-full justify-start gap-3',
-                        location.pathname === item.path && 'bg-primary text-primary-foreground'
-                      )}
-                      onClick={() => {
-                        navigate(item.path);
-                        setSidebarOpen(false);
-                      }}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {item.label}
-                    </Button>
-                  )
+                  <MobileSidebarItem key={item.path} item={item} />
                 ))}
               </nav>
 
@@ -1100,7 +1176,7 @@ const DashboardLayout = () => {
                   variant="ghost" 
                   className="w-full justify-start gap-3"
                   onClick={() => {
-                    navigate('/dashboard/profile');
+                    navigate(`/dashboard/profile/${user.id}`);
                     setSidebarOpen(false);
                   }}
                 >
@@ -1136,46 +1212,200 @@ const DashboardLayout = () => {
       <main 
         className={cn(
           "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
+          sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
         )}
       >
-        <div className="pt-16 lg:pt-16 pb-20 lg:pb-8">
+        <div className="pt-16 lg:pt-16 pb-24 lg:pb-8">
           <Outlet />
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-lg border-t border-border/40 z-40 pb-safe">
-        <div className="flex items-center justify-around py-2">
-          {navItems.filter(item => !item.submenu).slice(0, 4).map((item) => (
-            <Button
-              key={item.path}
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'flex-col gap-1 h-auto py-2 px-2',
-                location.pathname === item.path && 'text-primary'
-              )}
-              onClick={() => navigate(item.path)}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="text-[10px]">{item.label}</span>
-            </Button>
-          ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'flex-col gap-1 h-auto py-2 px-2',
-              location.pathname.startsWith('/dashboard/pitches') && 'text-primary'
+      {/* Mobile Bottom Navigation - New Modern Style */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
+        <motion.div 
+          layout
+          className="bg-[#1A1A1A]/95 backdrop-blur-xl border-t border-white/10 rounded-t-[30px] shadow-[0_-10px_40px_rgba(0,0,0,0.3)] overflow-hidden"
+          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+        >
+          <AnimatePresence mode="popLayout">
+            {showFabMenu && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Top Row: Pitch Options (Buttons) */}
+                <div className="flex items-center justify-between gap-2 px-4 pt-4">
+                  <Button
+                    variant="ghost"
+                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/dashboard/pitches/upload');
+                      setShowFabMenu(false);
+                    }}
+                  >
+                    <Video className="h-5 w-5 text-primary" />
+                    <span className="text-[10px] font-medium opacity-70">Upload</span>
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/dashboard/pitches');
+                      setShowFabMenu(false);
+                    }}
+                  >
+                    <Play className="h-5 w-5 text-primary" />
+                    <span className="text-[10px] font-medium opacity-70">Watch</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/dashboard/pitches/my');
+                      setShowFabMenu(false);
+                    }}
+                  >
+                    <ListVideo className="h-5 w-5 text-primary" />
+                    <span className="text-[10px] font-medium opacity-70">My Pitches</span>
+                  </Button>
+                </div>
+
+                {/* Middle Row: Search Bar */}
+                <div 
+                  className="h-10 bg-white/5 rounded-xl flex items-center px-4 gap-2 text-muted-foreground text-sm cursor-pointer hover:bg-white/10 transition-colors mx-4 mt-4 mb-2 border border-white/5"
+                  onClick={() => {
+                    navigate('/dashboard/network');
+                    setShowFabMenu(false);
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                  <span className="opacity-70">Type To Search...</span>
+                </div>
+                
+                <div className="h-px bg-white/5 mx-4 my-1" />
+              </motion.div>
             )}
-            onClick={() => navigate('/dashboard/pitches')}
-          >
-            <Video className="h-5 w-5" />
-            <span className="text-[10px]">Pitches</span>
-          </Button>
-        </div>
-      </nav>
+          </AnimatePresence>
+
+          {/* Bottom Row: Icons */}
+          <div className="flex items-center justify-between px-6 py-3 relative">
+            
+            {/* Home */}
+            <div className="relative">
+              {location.pathname === '/dashboard' && (
+                <motion.div
+                  layoutId="active-nav-ring"
+                  className="absolute inset-0 -m-1.5 border border-primary/50 bg-primary/10 rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "relative z-10 hover:bg-transparent h-10 w-10", 
+                  location.pathname === '/dashboard' ? "text-primary" : "text-muted-foreground"
+                )}
+                onClick={() => navigate('/dashboard')}
+              >
+                 <Home className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Network */}
+            <div className="relative">
+              {location.pathname.startsWith('/dashboard/network') && (
+                <motion.div
+                  layoutId="active-nav-ring"
+                  className="absolute inset-0 -m-1.5 border border-primary/50 bg-primary/10 rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "relative z-10 hover:bg-transparent h-10 w-10", 
+                  location.pathname.startsWith('/dashboard/network') ? "text-primary" : "text-muted-foreground"
+                )}
+                onClick={() => navigate('/dashboard/network')}
+              >
+                 <Network className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Center FAB (Toggle Menu) */}
+            <div className="relative">
+               <motion.div
+                 animate={{ rotate: showFabMenu ? 45 : 0 }}
+                 className="relative z-10"
+               >
+                 <Button
+                   className={cn(
+                     "h-10 w-10 rounded-xl shadow-lg flex items-center justify-center transition-all",
+                     showFabMenu ? "bg-primary text-primary-foreground" : "bg-white/10 text-white hover:bg-white/20"
+                   )}
+                   onClick={handleFabClick}
+                 >
+                   <Plus className="h-5 w-5" />
+                 </Button>
+               </motion.div>
+            </div>
+
+            {/* Messages */}
+            <div className="relative">
+              {location.pathname.startsWith('/dashboard/messages') && (
+                <motion.div
+                  layoutId="active-nav-ring"
+                  className="absolute inset-0 -m-1.5 border border-primary/50 bg-primary/10 rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "relative z-10 hover:bg-transparent h-10 w-10", 
+                  location.pathname.startsWith('/dashboard/messages') ? "text-primary" : "text-muted-foreground"
+                )}
+                onClick={() => navigate('/dashboard/messages')}
+              >
+                 <MessageSquare className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Profile */}
+            <div className="relative">
+              {location.pathname.startsWith('/dashboard/profile') && (
+                <motion.div
+                  layoutId="active-nav-ring"
+                  className="absolute inset-0 -m-1.5 border border-primary/50 bg-primary/10 rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "relative z-10 hover:bg-transparent h-10 w-10", 
+                  location.pathname.startsWith('/dashboard/profile') ? "text-primary" : "text-muted-foreground"
+                )}
+                onClick={() => navigate(`/dashboard/profile/${user.id}`)}
+              >
+                 <User className="h-5 w-5" />
+              </Button>
+            </div>
+
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };

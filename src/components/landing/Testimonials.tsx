@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 const testimonials = [
   {
-    quote: "CampusLaunch helped me find my co-founder in just 2 weeks. We've since raised $2M and are scaling fast.",
+    quote: "SheraStartup helped me find my co-founder in just 2 weeks. We've since raised $2M and are scaling fast.",
     author: "Sarah Chen",
     role: "Co-founder, EcoTrack",
     university: "Stanford University",
@@ -29,7 +29,7 @@ const testimonials = [
     rating: 5,
   },
   {
-    quote: "Our university's startup ecosystem has grown 300% since implementing CampusLaunch. It's a game-changer.",
+    quote: "Our university's startup ecosystem has grown 300% since implementing SheraStartup. It's a game-changer.",
     author: "James Thompson",
     role: "Director of Innovation",
     university: "UC Berkeley",

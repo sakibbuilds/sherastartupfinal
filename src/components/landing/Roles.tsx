@@ -109,7 +109,7 @@ export function Roles() {
             Choose your <span className="text-gradient">role</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            CampusLaunch is built for everyone in the startup ecosystem
+            SheraStartup is built for everyone in the startup ecosystem
           </p>
         </div>
 

@@ -269,7 +269,7 @@ const Onboarding = () => {
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Rocket className="h-8 w-8 text-primary" />
                   </div>
-                  <CardTitle className="text-2xl">Welcome to CampusLaunch!</CardTitle>
+                  <CardTitle className="text-2xl">Welcome to SheraStartup!</CardTitle>
                   <CardDescription>Let's set up your profile. What's your name?</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">

@@ -132,7 +132,7 @@ const Auth = () => {
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
                 <Rocket className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="text-2xl font-bold">CampusLaunch</span>
+              <span className="text-2xl font-bold">SheraStartup</span>
             </motion.div>
             <p className="text-muted-foreground">Reset your password</p>
           </div>
@@ -197,7 +197,7 @@ const Auth = () => {
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
               <Rocket className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold">CampusLaunch</span>
+            <span className="text-2xl font-bold">SheraStartup</span>
           </motion.div>
           <p className="text-muted-foreground">Where university startups take flight</p>
         </div>

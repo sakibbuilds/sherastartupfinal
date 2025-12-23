@@ -34,6 +34,7 @@ interface CreatePostProps {
 
 export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
   const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<{ avatar_url: string | null } | null>(null);
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<string>('General');
   const [posting, setPosting] = useState(false);
@@ -45,6 +46,20 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
   const [mentionedUsers, setMentionedUsers] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useState(() => {
+    if (user) {
+      const fetchProfile = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('user_id', user.id)
+          .single();
+        setUserProfile(data);
+      };
+      fetchProfile();
+    }
+  });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -253,7 +268,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
       <CardContent className="p-4">
         <div className="flex gap-3">
           <Avatar className="hidden sm:block h-10 w-10">
-            <AvatarImage src="" />
+            <AvatarImage src={userProfile?.avatar_url || ''} />
             <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2 relative w-full">
@@ -307,7 +322,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
             )}
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t">
-              <div className="flex items-center gap-1 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 scrollbar-hide -mx-2 px-2 sm:mx-0 sm:px-0">
+              <div className="flex items-center gap-1 overflow-x-auto sm:overflow-visible sm:flex-wrap pb-2 sm:pb-0 scrollbar-hide -mx-2 px-2 sm:mx-0 sm:px-0">
                 <input
                   type="file"
                   ref={fileInputRef}

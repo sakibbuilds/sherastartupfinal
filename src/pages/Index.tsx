@@ -12,7 +12,7 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>CampusLaunch - Where University Startups Take Flight</title>
+        <title>SheraStartup - Where University Startups Take Flight</title>
         <meta 
           name="description" 
           content="Connect with investors, find co-founders, and get mentored by industry leaders. The #1 platform for university entrepreneurs." 

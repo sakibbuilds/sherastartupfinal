@@ -26,7 +26,7 @@ export function Footer() {
               <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center">
                 <Rocket className="w-6 h-6 text-background" />
               </div>
-              <span className="text-xl font-black">CampusLaunch</span>
+              <span className="text-xl font-black">SheraStartup</span>
             </div>
             <p className="text-muted-foreground text-sm max-w-xs mb-6">
               The platform connecting university entrepreneurs with investors, mentors, and co-founders.

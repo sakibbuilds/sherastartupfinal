@@ -16,8 +16,8 @@
     --popover: 265 30% 8%;
     --popover-foreground: 210 40% 98%;
     
-    /* Vibrant Primary - Electric Purple */
-    --primary: 270 90% 65%;
+    /* Vibrant Primary - Mint Green */
+    --primary: 160 84% 45%;
     --primary-foreground: 0 0% 100%;
     
     --secondary: 265 20% 15%;
@@ -26,7 +26,7 @@
     --muted: 265 20% 15%;
     --muted-foreground: 265 10% 65%;
     
-    --accent: 270 80% 20%; /* Darker accent background */
+    --accent: 160 80% 20%; /* Darker accent background */
     --accent-foreground: 210 40% 98%;
     
     --destructive: 0 84.2% 60.2%;
@@ -34,7 +34,7 @@
     
     --border: 265 20% 20%;
     --input: 265 20% 20%;
-    --ring: 270 90% 65%;
+    --ring: 160 84% 45%;
     
     --radius: 1rem;
     
@@ -50,17 +50,17 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
     --shadow-glow-mint: 0 0 30px hsla(160, 84%, 45%, 0.3);
-    --shadow-glow-primary: 0 0 40px hsla(270, 90%, 65%, 0.25);
+    --shadow-glow-primary: 0 0 40px hsla(160, 84%, 45%, 0.25);
     
     /* Sidebar */
     --sidebar-background: 265 35% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 270 90% 65%;
+    --sidebar-primary: 160 84% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 265 20% 15%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 265 20% 20%;
-    --sidebar-ring: 270 90% 65%;
+    --sidebar-ring: 160 84% 45%;
   }
 
   /* Dark mode stays consistent as this is a dark-first design */
@@ -74,7 +74,7 @@
     --popover: 265 30% 8%;
     --popover-foreground: 210 40% 98%;
     
-    --primary: 270 90% 65%;
+    --primary: 160 84% 45%;
     --primary-foreground: 0 0% 100%;
     
     --secondary: 265 20% 15%;
@@ -83,7 +83,7 @@
     --muted: 265 20% 15%;
     --muted-foreground: 265 10% 65%;
     
-    --accent: 270 80% 20%;
+    --accent: 160 80% 20%;
     --accent-foreground: 210 40% 98%;
     
     --destructive: 0 62.8% 30.6%;
@@ -91,7 +91,7 @@
     
     --border: 265 20% 20%;
     --input: 265 20% 20%;
-    --ring: 270 90% 65%;
+    --ring: 160 84% 45%;
   }
 }
 
@@ -102,8 +102,8 @@
   body {
     @apply bg-background text-foreground overflow-x-hidden;
     background-image: 
-      radial-gradient(circle at 15% 50%, hsla(270, 90%, 35%, 0.15), transparent 25%),
-      radial-gradient(circle at 85% 30%, hsla(320, 80%, 40%, 0.15), transparent 25%);
+      radial-gradient(circle at 15% 50%, hsla(160, 84%, 35%, 0.15), transparent 25%),
+      radial-gradient(circle at 85% 30%, hsla(200, 80%, 40%, 0.15), transparent 25%);
     background-attachment: fixed;
   }
 
@@ -126,7 +126,7 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: hsla(270, 90%, 65%, 0.4);
+    background-color: hsla(160, 84%, 45%, 0.4);
   }
 
   /* Firefox */
@@ -146,7 +146,7 @@
   }
   
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-teal-400;
   }
   
   .animate-float {
