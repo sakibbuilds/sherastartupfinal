@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Rocket, Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import sheraLogo from '@/assets/shera-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
@@ -129,10 +130,7 @@ const Auth = () => {
               className="flex items-center justify-center gap-2 mb-4"
               whileHover={{ scale: 1.05 }}
             >
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-                <Rocket className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <span className="text-2xl font-bold">SheraStartup</span>
+              <img src={sheraLogo} alt="SheraStartup" className="h-10" />
             </motion.div>
             <p className="text-muted-foreground">Reset your password</p>
           </div>
@@ -194,10 +192,7 @@ const Auth = () => {
             className="flex items-center justify-center gap-2 mb-4"
             whileHover={{ scale: 1.05 }}
           >
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-              <Rocket className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold">SheraStartup</span>
+            <img src={sheraLogo} alt="SheraStartup" className="h-10" />
           </motion.div>
           <p className="text-muted-foreground">Where university startups take flight</p>
         </div>
