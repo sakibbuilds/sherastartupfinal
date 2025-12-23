@@ -6,16 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Loader2, MessageSquare, ArrowLeft, Check, CheckCheck, Paperclip, Image as ImageIcon, FileIcon, Download, X, Smile, Reply, CornerUpLeft } from 'lucide-react';
+import { Send, Loader2, MessageSquare, ArrowLeft, Check, CheckCheck, Paperclip, Image as ImageIcon, FileIcon, Download, X, Smile, Reply, CornerUpLeft, Mic, MicOff, Square, Play, Pause, Search, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, differenceInMinutes } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AvatarWithPresence, OnlineIndicator } from '@/components/common/OnlineIndicator';
+import { AvatarWithPresence } from '@/components/common/OnlineIndicator';
 import { usePresence } from '@/hooks/usePresence';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
+import { useVoiceRecorder, formatRecordingTime } from '@/hooks/useVoiceRecorder';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+// Edit time window in minutes
+const EDIT_TIME_WINDOW = 15;
 
 interface Conversation {
   id: string;
@@ -49,10 +54,11 @@ interface Message {
   is_read: boolean;
   created_at: string;
   attachment_url?: string;
-  attachment_type?: 'image' | 'file';
+  attachment_type?: 'image' | 'file' | 'voice';
   reply_to_id?: string;
   reply_to?: Message;
   reactions?: MessageReaction[];
+  edited_at?: string;
 }
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
@@ -85,6 +91,68 @@ const TypingIndicator = () => (
   </motion.div>
 );
 
+const VoiceMessagePlayer = ({ url }: { url: string }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleTimeUpdate = () => setProgress((audio.currentTime / audio.duration) * 100);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, []);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  return (
+    <div className="flex items-center gap-2 min-w-[180px]">
+      <audio ref={audioRef} src={url} preload="metadata" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20"
+        onClick={togglePlay}
+      >
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </Button>
+      <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-primary transition-all duration-100"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <span className="text-xs text-muted-foreground w-10 text-right">
+        {formatRecordingTime(Math.floor(duration))}
+      </span>
+    </div>
+  );
+};
+
 const Messages = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -108,6 +176,32 @@ const Messages = () => {
 
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  // Edit state
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editContent, setEditContent] = useState('');
+
+  // Voice recording
+  const { isRecording, recordingTime, audioBlob, audioUrl, startRecording, stopRecording, cancelRecording, clearRecording } = useVoiceRecorder();
+
+  // Filter messages by search query
+  const filteredMessages = searchQuery.trim()
+    ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    : messages;
+
+  const canEditMessage = (message: Message) => {
+    if (message.sender_id !== user?.id) return false;
+    const minutesAgo = differenceInMinutes(new Date(), new Date(message.created_at));
+    return minutesAgo <= EDIT_TIME_WINDOW;
+  };
+
+  const canDeleteMessage = (message: Message) => {
+    return message.sender_id === user?.id;
+  };
 
   useEffect(() => {
     if (user) {
@@ -142,7 +236,7 @@ const Messages = () => {
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, {
                 ...newMsg,
-                attachment_type: newMsg.attachment_type as 'image' | 'file' | undefined,
+                attachment_type: newMsg.attachment_type as 'image' | 'file' | 'voice' | undefined,
                 attachment_url: newMsg.attachment_url ?? undefined,
                 is_read: newMsg.is_read ?? false,
                 reactions: []
@@ -171,6 +265,19 @@ const Messages = () => {
             } : m));
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${selectedConversation.id}`
+          },
+          (payload) => {
+            const deletedMsg = payload.old as any;
+            setMessages(prev => prev.filter(m => m.id !== deletedMsg.id));
+          }
+        )
         .subscribe();
 
       // Subscribe to reactions
@@ -184,7 +291,6 @@ const Messages = () => {
             table: 'message_reactions'
           },
           async () => {
-            // Refetch reactions for all messages
             await fetchReactionsForMessages();
           }
         )
@@ -430,7 +536,6 @@ const Messages = () => {
       .order('created_at', { ascending: true });
 
     if (data) {
-      // Fetch reply_to messages
       const replyIds = data.filter(m => m.reply_to_id).map(m => m.reply_to_id);
       let replyMessages: any[] = [];
       
@@ -442,7 +547,6 @@ const Messages = () => {
         replyMessages = replies || [];
       }
 
-      // Fetch reactions
       const messageIds = data.map(m => m.id);
       const { data: reactions } = await (supabase
         .from('message_reactions') as any)
@@ -451,11 +555,12 @@ const Messages = () => {
 
       const messagesWithData = data.map(m => ({
         ...m,
-        attachment_type: m.attachment_type as 'image' | 'file' | undefined,
+        attachment_type: m.attachment_type as 'image' | 'file' | 'voice' | undefined,
         attachment_url: m.attachment_url ?? undefined,
         is_read: m.is_read ?? false,
         reply_to: replyMessages.find(r => r.id === m.reply_to_id),
-        reactions: (reactions || []).filter((r: MessageReaction) => r.message_id === m.id)
+        reactions: (reactions || []).filter((r: MessageReaction) => r.message_id === m.id),
+        edited_at: (m as any).edited_at ?? undefined
       }));
 
       setMessages(messagesWithData);
@@ -484,14 +589,18 @@ const Messages = () => {
       .eq('id', messageId);
   };
 
-  const handleSend = async (attachmentUrl?: string, attachmentType?: 'image' | 'file') => {
+  const handleSend = async (attachmentUrl?: string, attachmentType?: 'image' | 'file' | 'voice') => {
     if ((!newMessage.trim() && !attachmentUrl) || !selectedConversation || !user) return;
 
     setSending(true);
     
+    const messageContent = attachmentType === 'voice' 
+      ? '🎤 Voice message' 
+      : (newMessage.trim() || (attachmentType === 'image' ? 'Sent an image' : 'Sent a file'));
+    
     const optimisticMessage: Message = {
       id: crypto.randomUUID(),
-      content: newMessage.trim() || (attachmentType === 'image' ? 'Sent an image' : 'Sent a file'),
+      content: messageContent,
       sender_id: user.id,
       is_read: false,
       created_at: new Date().toISOString(),
@@ -531,7 +640,7 @@ const Messages = () => {
     if (sentMessage) {
       setMessages(prev => prev.map(m => m.id === optimisticMessage.id ? {
         ...sentMessage,
-        attachment_type: sentMessage.attachment_type as 'image' | 'file' | undefined,
+        attachment_type: sentMessage.attachment_type as 'image' | 'file' | 'voice' | undefined,
         attachment_url: sentMessage.attachment_url ?? undefined,
         is_read: sentMessage.is_read ?? false,
         reply_to: optimisticMessage.reply_to,
@@ -547,6 +656,60 @@ const Messages = () => {
     }
 
     setSending(false);
+  };
+
+  const handleEditMessage = async () => {
+    if (!editingMessage || !editContent.trim() || !user) return;
+
+    const { error } = await supabase
+      .from('messages')
+      .update({ 
+        content: editContent.trim(),
+        edited_at: new Date().toISOString()
+      } as any)
+      .eq('id', editingMessage.id)
+      .eq('sender_id', user.id);
+
+    if (error) {
+      console.error('Error editing message:', error);
+      toast({
+        title: "Edit failed",
+        description: "Could not edit the message.",
+        variant: "destructive"
+      });
+    } else {
+      setMessages(prev => prev.map(m => 
+        m.id === editingMessage.id 
+          ? { ...m, content: editContent.trim(), edited_at: new Date().toISOString() }
+          : m
+      ));
+      toast({ title: "Message edited" });
+    }
+
+    setEditingMessage(null);
+    setEditContent('');
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('sender_id', user.id);
+
+    if (error) {
+      console.error('Error deleting message:', error);
+      toast({
+        title: "Delete failed",
+        description: "Could not delete the message.",
+        variant: "destructive"
+      });
+    } else {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      toast({ title: "Message deleted" });
+    }
   };
 
   const handleTyping = useCallback(() => {
@@ -615,6 +778,55 @@ const Messages = () => {
     }
   };
 
+  const handleVoiceRecordingToggle = async () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      try {
+        await startRecording();
+      } catch (error) {
+        toast({
+          title: "Microphone access denied",
+          description: "Please allow microphone access to send voice messages.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleSendVoiceMessage = async () => {
+    if (!audioBlob || !user || !selectedConversation) return;
+
+    setSending(true);
+
+    try {
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.webm`;
+      const filePath = `${selectedConversation.id}/${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('chat-attachments')
+        .upload(filePath, audioBlob);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-attachments')
+        .getPublicUrl(filePath);
+
+      clearRecording();
+      await handleSend(publicUrl, 'voice');
+
+    } catch (error) {
+      console.error('Error uploading voice message:', error);
+      toast({
+        title: "Upload failed",
+        description: "Could not send voice message. Please try again.",
+        variant: "destructive"
+      });
+      setSending(false);
+    }
+  };
+
   const handleAddReaction = async (messageId: string, emoji: string) => {
     if (!user) return;
     
@@ -632,7 +844,6 @@ const Messages = () => {
       if (error) {
         console.error('Error adding reaction:', error);
       } else {
-        // Optimistic update
         setMessages(prev => prev.map(m => {
           if (m.id !== messageId) return m;
           const existingReaction = m.reactions?.find(r => r.user_id === user.id && r.emoji === emoji);
@@ -664,7 +875,6 @@ const Messages = () => {
       if (error) {
         console.error('Error removing reaction:', error);
       } else {
-        // Optimistic update
         setMessages(prev => prev.map(m => {
           if (m.id !== messageId) return m;
           return {
@@ -800,7 +1010,7 @@ const Messages = () => {
                   <AvatarFallback>{otherUser?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
               </AvatarWithPresence>
-              <div className="flex flex-col">
+              <div className="flex-1 flex flex-col">
                 <p className="font-semibold">{otherUser?.full_name || 'User'}</p>
                 {isTyping ? (
                   <p className="text-xs text-primary animate-pulse">typing...</p>
@@ -810,21 +1020,72 @@ const Messages = () => {
                   <p className="text-xs text-muted-foreground">Offline</p>
                 )}
               </div>
+              
+              {/* Search toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("h-9 w-9", showSearch && "bg-white/10")}
+                onClick={() => setShowSearch(!showSearch)}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
             </div>
+
+            {/* Search bar */}
+            <AnimatePresence>
+              {showSearch && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="border-b border-white/10 overflow-hidden"
+                >
+                  <div className="p-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search messages..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 bg-white/5 border-white/10"
+                      />
+                      {searchQuery && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                          onClick={() => setSearchQuery('')}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {searchQuery && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Found {filteredMessages.length} message{filteredMessages.length !== 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-1 pb-4">
-                {messages.map((message, index) => {
+                {filteredMessages.map((message, index) => {
                   const isOwn = message.sender_id === user?.id;
-                  const prevMessage = messages[index - 1];
-                  const nextMessage = messages[index + 1];
+                  const prevMessage = filteredMessages[index - 1];
+                  const nextMessage = filteredMessages[index + 1];
                   
                   const isSequence = prevMessage && prevMessage.sender_id === message.sender_id;
                   const isLastInSequence = !nextMessage || nextMessage.sender_id !== message.sender_id;
                   
                   const showAvatar = !isOwn && isLastInSequence;
                   const groupedReactions = getGroupedReactions(message.reactions);
+                  const isEditable = canEditMessage(message);
+                  const isDeletable = canDeleteMessage(message);
                   
                   return (
                     <motion.div
@@ -866,7 +1127,7 @@ const Messages = () => {
                           {/* Action buttons - visible on hover */}
                           <div className={cn(
                             "absolute top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
-                            isOwn ? "-left-20" : "-right-20"
+                            isOwn ? "-left-24" : "-right-24"
                           )}>
                             <Popover open={showEmojiPicker === message.id} onOpenChange={(open) => setShowEmojiPicker(open ? message.id : null)}>
                               <PopoverTrigger asChild>
@@ -896,6 +1157,49 @@ const Messages = () => {
                             >
                               <Reply className="h-4 w-4" />
                             </Button>
+                            {isOwn && isEditable && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 rounded-full bg-background/80 hover:bg-background"
+                                onClick={() => {
+                                  setEditingMessage(message);
+                                  setEditContent(message.content);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isOwn && isDeletable && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7 rounded-full bg-background/80 hover:bg-background hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete message?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. The message will be permanently deleted.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleDeleteMessage(message.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </div>
 
                           <div
@@ -962,7 +1266,17 @@ const Messages = () => {
                               </div>
                             )}
 
-                            {message.content}
+                            {message.attachment_url && message.attachment_type === 'voice' && (
+                              <div className="mb-2">
+                                <VoiceMessagePlayer url={message.attachment_url} />
+                              </div>
+                            )}
+
+                            {message.attachment_type !== 'voice' && message.content}
+                            
+                            {message.edited_at && (
+                              <span className="text-[10px] opacity-60 ml-2">(edited)</span>
+                            )}
                           </div>
 
                           {/* Reactions display */}
@@ -1037,6 +1351,50 @@ const Messages = () => {
               </div>
             </ScrollArea>
 
+            {/* Edit message modal */}
+            <AnimatePresence>
+              {editingMessage && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="border-t border-white/10 bg-background/50 overflow-hidden"
+                >
+                  <div className="p-3 flex items-center gap-3">
+                    <div className="w-1 h-10 bg-amber-500 rounded-full" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Editing message</p>
+                      <Input
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="mt-1 bg-white/5 border-white/10"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleEditMessage();
+                          }
+                          if (e.key === 'Escape') {
+                            setEditingMessage(null);
+                            setEditContent('');
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Press Enter to save, Escape to cancel
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                      setEditingMessage(null);
+                      setEditContent('');
+                    }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Reply preview */}
             <AnimatePresence>
               {replyingTo && (
@@ -1055,6 +1413,57 @@ const Messages = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setReplyingTo(null)}>
                       <X className="h-4 w-4" />
                     </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Voice recording preview */}
+            <AnimatePresence>
+              {(isRecording || audioUrl) && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="border-t border-white/10 bg-background/50 overflow-hidden"
+                >
+                  <div className="p-3 flex items-center gap-3">
+                    <div className={cn(
+                      "w-3 h-3 rounded-full",
+                      isRecording ? "bg-red-500 animate-pulse" : "bg-primary"
+                    )} />
+                    
+                    {isRecording ? (
+                      <>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Recording...</p>
+                          <p className="text-xs text-muted-foreground">{formatRecordingTime(recordingTime)}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelRecording}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" className="h-8 w-8 rounded-full bg-red-500 hover:bg-red-600" onClick={stopRecording}>
+                          <Square className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : audioUrl ? (
+                      <>
+                        <div className="flex-1">
+                          <audio src={audioUrl} controls className="w-full h-8" />
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={clearRecording}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          className="h-8 w-8 rounded-full" 
+                          onClick={handleSendVoiceMessage}
+                          disabled={sending}
+                        >
+                          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
                 </motion.div>
               )}
@@ -1097,16 +1506,30 @@ const Messages = () => {
                   onChange={(e) => handleFileUpload(e, 'file')} 
                 />
 
+                {/* Voice record button */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn(
+                    "h-10 w-10 rounded-full shrink-0",
+                    isRecording && "text-red-500"
+                  )}
+                  onClick={handleVoiceRecordingToggle}
+                >
+                  {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5 text-muted-foreground" />}
+                </Button>
+
                 <Input
                   placeholder="Type a message..."
                   value={newMessage}
                   onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
                   className="flex-1 bg-white/5 border-white/10 focus:border-primary min-h-[40px] max-h-32"
+                  disabled={isRecording || !!audioUrl}
                 />
                 <Button 
                   onClick={() => handleSend()} 
-                  disabled={!newMessage.trim() || sending}
+                  disabled={!newMessage.trim() || sending || isRecording || !!audioUrl}
                   size="icon"
                   className="h-10 w-10 rounded-full shrink-0"
                 >
