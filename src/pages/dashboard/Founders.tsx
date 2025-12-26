@@ -498,7 +498,7 @@ const Founders = () => {
         {/* Profiles Grid */}
         <div className="flex-1">
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <Card key={i} className="animate-pulse glass-card">
                       <CardHeader className="h-24 bg-muted/20 rounded-t-lg" />
@@ -512,11 +512,11 @@ const Founders = () => {
             </div>
           ) : filteredProfiles.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {paginatedProfiles.map((profile) => (
                   <div
                     key={profile.id}
-                    className="relative aspect-[3/4] rounded-3xl overflow-hidden cursor-pointer group shadow-xl"
+                    className="relative aspect-[4/5] rounded-2xl overflow-hidden cursor-pointer group shadow-lg"
                     onClick={() => navigate(`/dashboard/profile/${profile.user_id}`)}
                   >
                     {/* Background Image */}
@@ -524,11 +524,11 @@ const Founders = () => {
                       <img 
                         src={profile.avatar_url} 
                         alt={profile.full_name}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/30 to-purple-600/30 flex items-center justify-center">
-                        <span className="text-6xl font-bold text-white/20">
+                        <span className="text-5xl font-bold text-white/20">
                           {profile.full_name?.substring(0, 2).toUpperCase()}
                         </span>
                       </div>
@@ -538,10 +538,10 @@ const Founders = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
 
                     {/* Content */}
-                    <div className="absolute bottom-0 left-0 right-0 p-5 text-white transform transition-transform duration-300 translate-y-2 group-hover:translate-y-0">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform transition-transform duration-300 translate-y-1 group-hover:translate-y-0">
                       {/* Name and Badge */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-xl font-bold truncate">{profile.full_name}</h3>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <h3 className="text-lg font-bold truncate">{profile.full_name}</h3>
                         {/* Verified Badge */}
                         {isVerified(profile) && (
                           <VerifiedBadge size="sm" />
@@ -549,50 +549,50 @@ const Founders = () => {
                       </div>
 
                       {/* Bio/Title */}
-                      <p className="text-sm text-gray-300 line-clamp-2 mb-4 font-medium">
+                      <p className="text-xs text-gray-300 line-clamp-1 mb-3 font-medium">
                         {profile.title || profile.bio || 'Founder'}
                       </p>
 
                       {/* Stats & Action */}
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-4 text-sm font-medium text-gray-300">
-                          <div className="flex items-center gap-1.5">
-                            <Users className="w-4 h-4" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-xs font-medium text-gray-300">
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5" />
                             <span>{connectionCounts[profile.user_id] || 0}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <Briefcase className="w-4 h-4" />
+                          <div className="flex items-center gap-1">
+                            <Briefcase className="w-3.5 h-3.5" />
                             <span>{startupCounts[profile.user_id] || 0}</span>
                           </div>
                         </div>
                         
                         <Button 
                           size="sm" 
-                          className="rounded-full bg-white text-black hover:bg-white/90 px-5 font-semibold transition-all hover:scale-105 active:scale-95 h-9"
+                          className="rounded-full bg-white text-black hover:bg-white/90 px-4 font-semibold transition-all hover:scale-105 active:scale-95 h-8 text-xs"
                           onClick={(e) => handleConnect(e, profile.user_id)}
                         >
                           {connectionStatus[profile.user_id] === 'accepted' ? (
-                            <>Message <MessageSquare className="w-3.5 h-3.5 ml-1.5" /></>
+                            <>Message <MessageSquare className="w-3 h-3 ml-1" /></>
                           ) : connectionStatus[profile.user_id] === 'pending' ? (
-                            <>Pending <Clock className="w-3.5 h-3.5 ml-1.5" /></>
+                            <>Pending <Clock className="w-3 h-3 ml-1" /></>
                           ) : (
-                            <>Connect <Plus className="w-3.5 h-3.5 ml-1.5" /></>
+                            <>Connect <Plus className="w-3 h-3 ml-1" /></>
                           )}
                         </Button>
                       </div>
                     </div>
 
                     {/* Top Badges (University/Startup) */}
-                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                    <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                       {startups[profile.user_id] && (
                          <Badge 
-                           className="bg-black/40 backdrop-blur-md border-white/10 text-white hover:bg-black/60 px-3 py-1"
+                           className="bg-black/40 backdrop-blur-md border-white/10 text-white hover:bg-black/60 px-2 py-0.5 text-xs"
                            onClick={(e) => {
                              e.stopPropagation();
                              navigate(`/dashboard/startups/${startups[profile.user_id].id}`);
                            }}
                          >
-                           <Building2 className="h-3 w-3 mr-1.5" />
+                           <Building2 className="h-2.5 w-2.5 mr-1" />
                            {startups[profile.user_id].name}
                          </Badge>
                       )}
@@ -600,13 +600,13 @@ const Founders = () => {
                       {profile.university && (
                           <Badge 
                             variant="secondary" 
-                            className="bg-white/20 backdrop-blur-md border-transparent text-white hover:bg-white/30 px-3 py-1 w-fit"
+                            className="bg-white/20 backdrop-blur-md border-transparent text-white hover:bg-white/30 px-2 py-0.5 text-xs w-fit"
                             onClick={(e) => {
                               e.stopPropagation();
                               setFilterUniversity(profile.university!);
                             }}
                           >
-                            <GraduationCap className="h-3 w-3 mr-1.5" />
+                            <GraduationCap className="h-2.5 w-2.5 mr-1" />
                             {profile.university}
                           </Badge>
                       )}
