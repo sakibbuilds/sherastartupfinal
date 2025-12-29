@@ -1093,7 +1093,7 @@ const DashboardLayout = () => {
       </header>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 h-16">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <AlignLeft className="h-6 w-6" />
@@ -1138,9 +1138,9 @@ const DashboardLayout = () => {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed inset-y-0 left-0 w-72 bg-black/40 backdrop-blur-xl border-r border-white/10 z-50 flex flex-col"
+              className="lg:hidden fixed inset-y-0 left-0 w-72 bg-card/95 backdrop-blur-xl border-r border-border z-50 flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-2" onClick={() => navigate('/dashboard')}>
                   <img src="/logo.png" alt="SheraStartup" className="h-8 w-auto object-contain" />
                 </div>
@@ -1224,7 +1224,7 @@ const DashboardLayout = () => {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
         <motion.div 
           layout
-          className="bg-[#1A1A1A]/95 backdrop-blur-xl border-t border-white/10 rounded-t-[30px] shadow-[0_-10px_40px_rgba(0,0,0,0.3)] overflow-hidden"
+          className="bg-card/95 backdrop-blur-xl border-t border-border rounded-t-[30px] shadow-elevated-lg overflow-hidden"
           transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
         >
           <AnimatePresence mode="popLayout">
@@ -1239,7 +1239,7 @@ const DashboardLayout = () => {
                 <div className="flex items-center justify-between gap-2 px-4 pt-4">
                   <Button
                     variant="ghost"
-                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5"
+                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-secondary hover:bg-secondary/80 border border-border"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/dashboard/pitches/upload');
@@ -1252,7 +1252,7 @@ const DashboardLayout = () => {
                   
                   <Button
                     variant="ghost"
-                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5"
+                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-secondary hover:bg-secondary/80 border border-border"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/dashboard/pitches');
@@ -1265,7 +1265,7 @@ const DashboardLayout = () => {
 
                   <Button
                     variant="ghost"
-                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5"
+                    className="flex-1 flex flex-col gap-1 h-auto py-3 rounded-xl bg-secondary hover:bg-secondary/80 border border-border"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/dashboard/pitches/my');
@@ -1279,7 +1279,7 @@ const DashboardLayout = () => {
 
                 {/* Middle Row: Search Bar */}
                 <div 
-                  className="h-10 bg-white/5 rounded-xl flex items-center px-4 gap-2 text-muted-foreground text-sm cursor-pointer hover:bg-white/10 transition-colors mx-4 mt-4 mb-2 border border-white/5"
+                  className="h-10 bg-secondary rounded-xl flex items-center px-4 gap-2 text-muted-foreground text-sm cursor-pointer hover:bg-secondary/80 transition-colors mx-4 mt-4 mb-2 border border-border"
                   onClick={() => {
                     navigate('/dashboard/network');
                     setShowFabMenu(false);
@@ -1289,7 +1289,7 @@ const DashboardLayout = () => {
                   <span className="opacity-70">Type To Search...</span>
                 </div>
                 
-                <div className="h-px bg-white/5 mx-4 my-1" />
+                <div className="h-px bg-border mx-4 my-1" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1350,7 +1350,7 @@ const DashboardLayout = () => {
                  <Button
                    className={cn(
                      "h-10 w-10 rounded-xl shadow-lg flex items-center justify-center transition-all",
-                     showFabMenu ? "bg-primary text-primary-foreground" : "bg-white/10 text-white hover:bg-white/20"
+                     showFabMenu ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-secondary/80"
                    )}
                    onClick={handleFabClick}
                  >

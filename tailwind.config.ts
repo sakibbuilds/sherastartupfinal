@@ -50,6 +50,7 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Accent colors - use sparingly
         mint: "hsl(var(--mint))",
         sky: "hsl(var(--sky))",
         coral: "hsl(var(--coral))",
@@ -71,10 +72,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        'elevated': '0 4px 12px rgba(0, 0, 0, 0.1)',
-        'elevated-lg': '0 10px 30px rgba(0, 0, 0, 0.12)',
-        'glow-mint': '0 0 40px hsla(168, 76%, 36%, 0.3)',
-        'glow-sky': '0 0 40px hsla(207, 90%, 46%, 0.3)',
+        'elevated': '0 4px 12px rgba(0, 0, 0, 0.06)',
+        'elevated-lg': '0 10px 30px rgba(0, 0, 0, 0.08)',
+        'subtle': '0 1px 3px rgba(0, 0, 0, 0.04)',
       },
       keyframes: {
         "accordion-down": {
@@ -126,10 +126,6 @@ export default {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
-        "heart-beat": {
-          "0%, 100%": { transform: "scale(1)" },
-          "50%": { transform: "scale(1.2)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -144,7 +140,6 @@ export default {
         "float": "float 6s ease-in-out infinite",
         "spin-slow": "spin-slow 20s linear infinite",
         "shimmer": "shimmer 2s linear infinite",
-        "heart-beat": "heart-beat 0.3s ease-in-out",
       },
     },
   },
