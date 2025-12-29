@@ -1,4 +1,6 @@
-import { Rocket, Twitter, Linkedin, Github, Instagram } from "lucide-react";
+import { Rocket, Twitter, Linkedin, Github, Instagram, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const footerLinks = {
   Product: ["Features", "Pricing", "Integrations", "Changelog", "Roadmap"],
@@ -16,15 +18,33 @@ const socialLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-card">
+    <footer className="bg-card border-t border-border">
       <div className="container px-4 md:px-6 py-16">
+        {/* Newsletter Section */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 pb-12 border-b border-border mb-12">
+          <div>
+            <h3 className="text-xl font-bold mb-2">Quick Notice & Updates</h3>
+            <p className="text-muted-foreground">Get notified when we update or launch features.</p>
+          </div>
+          <div className="flex gap-2 w-full lg:w-auto">
+            <Input 
+              placeholder="Enter your email..." 
+              className="max-w-xs bg-secondary/50 border-border"
+            />
+            <Button className="bg-gradient-purple text-white shadow-sm">
+              Get It Now
+              <Send className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+
         {/* Main Footer */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center">
-                <Rocket className="w-6 h-6 text-background" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-purple flex items-center justify-center shadow-purple">
+                <Rocket className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-black">SheraStartup</span>
             </div>
@@ -39,7 +59,7 @@ export function Footer() {
                   <a
                     key={social.label}
                     href={social.href}
-                    className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-mint/10 transition-colors"
+                    className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                     aria-label={social.label}
                   >
                     <Icon className="w-5 h-5" />
@@ -58,7 +78,7 @@ export function Footer() {
                   <li key={link}>
                     <a
                       href="#"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       {link}
                     </a>
@@ -72,17 +92,14 @@ export function Footer() {
         {/* Bottom */}
         <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground">
-            © 2024 CampusLaunch. All rights reserved.
+            © 2024 SheraStartup. All rights reserved.
           </p>
           <div className="flex items-center gap-6 mt-4 md:mt-0">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Privacy Policy
+            <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              Privacy policy
             </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Terms of Service
-            </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Cookie Settings
+            <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              Terms & condition
             </a>
           </div>
         </div>

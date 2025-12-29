@@ -50,7 +50,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Accent colors - use sparingly
+        // Accent colors
+        violet: {
+          DEFAULT: "hsl(var(--violet))",
+          light: "hsl(var(--violet-light))",
+          dark: "hsl(var(--violet-dark))",
+        },
         mint: "hsl(var(--mint))",
         sky: "hsl(var(--sky))",
         coral: "hsl(var(--coral))",
@@ -70,11 +75,17 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "2xl": "1rem",
+        "3xl": "1.5rem",
+        "4xl": "2rem",
       },
       boxShadow: {
-        'elevated': '0 4px 12px rgba(0, 0, 0, 0.06)',
-        'elevated-lg': '0 10px 30px rgba(0, 0, 0, 0.08)',
-        'subtle': '0 1px 3px rgba(0, 0, 0, 0.04)',
+        'elevated': '0 4px 20px rgba(91, 77, 199, 0.08)',
+        'elevated-lg': '0 10px 40px rgba(91, 77, 199, 0.12)',
+        'purple': '0 10px 40px rgba(91, 77, 199, 0.2)',
+        'purple-lg': '0 20px 60px rgba(91, 77, 199, 0.25)',
+        'card': '0 4px 24px rgba(0, 0, 0, 0.06)',
+        'card-hover': '0 12px 40px rgba(91, 77, 199, 0.15)',
       },
       keyframes: {
         "accordion-down": {
@@ -126,6 +137,12 @@ export default {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "blob": {
+          "0%": { transform: "translate(0px, 0px) scale(1)" },
+          "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+          "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+          "100%": { transform: "translate(0px, 0px) scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -140,6 +157,7 @@ export default {
         "float": "float 6s ease-in-out infinite",
         "spin-slow": "spin-slow 20s linear infinite",
         "shimmer": "shimmer 2s linear infinite",
+        "blob": "blob 7s infinite",
       },
     },
   },
