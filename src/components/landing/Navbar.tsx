@@ -35,14 +35,14 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-200",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         isScrolled
-          ? "bg-background/95 backdrop-blur-sm border-b border-border"
-          : "bg-background"
+          ? "bg-white/90 backdrop-blur-xl border-b border-border/50 shadow-soft"
+          : "bg-transparent"
       )}
     >
       <div className="container px-4 md:px-6">
-        <nav className="flex items-center justify-between h-14">
+        <nav className="flex items-center justify-between h-16">
           {/* Logo - Left */}
           <Link to="/" className="flex items-center gap-2 group">
             <span className="text-sm font-medium text-muted-foreground">VC</span>
@@ -50,20 +50,20 @@ export function Navbar() {
           </Link>
 
           {/* Right Actions */}
-          <div className="hidden md:flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
+          <div className="hidden md:flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="text-muted-foreground gap-2 rounded-full">
               <HelpCircle className="w-4 h-4" />
               Help
             </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
+            <Button variant="ghost" size="sm" className="text-muted-foreground gap-2 rounded-full">
               <ArrowUpDown className="w-4 h-4" />
               Sort
             </Button>
             
             {user ? (
-              <div className="flex items-center gap-2 ml-2">
+              <div className="flex items-center gap-3 ml-2">
                 <NotificationBell />
-                <Button size="sm" className="bg-primary text-primary-foreground" asChild>
+                <Button size="sm" className="shadow-navy" asChild>
                   <Link to="/dashboard">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Dashboard
@@ -71,11 +71,11 @@ export function Navbar() {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 ml-2">
-                <Button variant="ghost" size="sm" asChild>
+              <div className="flex items-center gap-3 ml-2">
+                <Button variant="ghost" size="sm" className="rounded-full" asChild>
                   <Link to="/auth">Log in</Link>
                 </Button>
-                <Button size="sm" className="bg-primary text-primary-foreground" asChild>
+                <Button size="sm" className="shadow-navy" asChild>
                   <Link to="/auth">Submit Startup</Link>
                 </Button>
               </div>
@@ -85,7 +85,7 @@ export function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-secondary transition-colors"
+            className="md:hidden p-2.5 rounded-full bg-white border border-border/30 shadow-soft hover:shadow-soft-md transition-all"
           >
             {isMobileMenuOpen ? (
               <X className="w-5 h-5" />

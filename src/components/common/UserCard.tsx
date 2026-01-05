@@ -18,8 +18,8 @@ interface UserCardProps {
 }
 
 const roleColors = {
-  founder: "bg-mint/10 text-mint border-mint/20",
-  investor: "bg-sky/10 text-sky border-sky/20",
+  founder: "bg-primary/10 text-primary border-primary/20",
+  investor: "bg-teal/10 text-teal border-teal/20",
   mentor: "bg-pink/10 text-pink border-pink/20",
   admin: "bg-foreground/10 text-foreground border-foreground/20",
 };
@@ -75,8 +75,8 @@ export function UserCard({
       {/* Compatibility Score */}
       {compatibilityScore && (
         <div className="absolute top-3 right-3">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-mint/10 text-mint text-xs font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse-ring" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-ring" />
             {compatibilityScore}% match
           </div>
         </div>
@@ -100,14 +100,14 @@ export function UserCard({
           <span
             className={cn(
               "absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-card",
-              online ? "bg-mint" : "bg-muted-foreground/40"
+              online ? "bg-teal" : "bg-muted-foreground/40"
             )}
           />
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground truncate group-hover:text-mint transition-colors">
+          <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
             {name}
           </h3>
           <p className="text-sm text-muted-foreground truncate">{university}</p>
@@ -129,12 +129,12 @@ export function UserCard({
               Message
             </Button>
             <Button variant="ghost" size="sm" disabled>
-              <Check className="w-4 h-4 text-mint" />
+              <Check className="w-4 h-4 text-primary" />
             </Button>
           </>
         ) : (
           <Button
-            variant="mint"
+            variant="default"
             size="sm"
             className="flex-1"
             onClick={handleConnect}

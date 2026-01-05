@@ -638,7 +638,7 @@ const Onboarding = () => {
             <Button
               onClick={handleComplete}
               disabled={loading}
-              className="bg-mint hover:bg-mint/90"
+              className="bg-primary hover:bg-primary/90"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

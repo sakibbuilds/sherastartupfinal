@@ -199,40 +199,40 @@ export function Hero() {
   };
 
   return (
-    <section ref={heroRef} className="relative pt-24 pb-12 overflow-hidden bg-background">
-      {/* Gradient Orbs */}
+    <section ref={heroRef} className="relative pt-24 pb-12 overflow-hidden bg-gradient-hero">
+      {/* Gradient Orbs - Soft blue tones */}
       <div
         ref={orb1Ref}
-        className="absolute top-20 left-[10%] w-[400px] h-[400px] rounded-full opacity-30 pointer-events-none"
+        className="absolute top-20 left-[10%] w-[500px] h-[500px] rounded-full opacity-40 pointer-events-none"
         style={{
-          background: "radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)",
-          filter: "blur(60px)",
+          background: "radial-gradient(circle, hsl(200 70% 70% / 0.3) 0%, transparent 70%)",
+          filter: "blur(80px)",
         }}
       />
       <div
         ref={orb2Ref}
-        className="absolute top-40 right-[15%] w-[300px] h-[300px] rounded-full opacity-25 pointer-events-none"
+        className="absolute top-40 right-[15%] w-[400px] h-[400px] rounded-full opacity-30 pointer-events-none"
         style={{
-          background: "radial-gradient(circle, hsl(var(--accent) / 0.5) 0%, transparent 70%)",
-          filter: "blur(50px)",
+          background: "radial-gradient(circle, hsl(195 60% 75% / 0.4) 0%, transparent 70%)",
+          filter: "blur(70px)",
         }}
       />
       <div
         ref={orb3Ref}
-        className="absolute bottom-0 left-[40%] w-[350px] h-[350px] rounded-full opacity-20 pointer-events-none"
+        className="absolute bottom-0 left-[40%] w-[450px] h-[450px] rounded-full opacity-25 pointer-events-none"
         style={{
-          background: "radial-gradient(circle, hsl(var(--secondary) / 0.6) 0%, transparent 70%)",
-          filter: "blur(55px)",
+          background: "radial-gradient(circle, hsl(210 50% 80% / 0.4) 0%, transparent 70%)",
+          filter: "blur(75px)",
         }}
       />
 
-      {/* Grid Pattern Overlay */}
+      {/* Subtle grid pattern */}
       <div 
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 opacity-[0.02] pointer-events-none"
         style={{
           backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
                            linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
+          backgroundSize: "80px 80px",
         }}
       />
 
@@ -242,11 +242,11 @@ export function Hero() {
           <div ref={badgeRef}>
             <Badge 
               variant="secondary" 
-              className="mb-6 px-4 py-2 text-sm font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 transition-colors cursor-default"
+              className="mb-6 px-5 py-2.5 text-sm font-medium bg-white text-primary border border-border/50 shadow-soft hover:shadow-soft-md transition-all cursor-default rounded-full"
             >
-              <Rocket className="w-4 h-4 mr-2 animate-pulse" />
+              <Rocket className="w-4 h-4 mr-2 text-primary" />
               Curated directory of vibe-coded startups
-              <ArrowRight className="w-3 h-3 ml-2" />
+              <ArrowRight className="w-3 h-3 ml-2 text-muted-foreground" />
             </Badge>
           </div>
           
@@ -281,11 +281,11 @@ export function Hero() {
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                   className={`
-                    group flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium 
+                    group flex items-center gap-2.5 px-5 py-3 rounded-full text-sm font-medium 
                     transition-all duration-300 whitespace-nowrap shrink-0 relative overflow-hidden
                     ${isActive 
-                      ? "bg-foreground text-background shadow-lg shadow-foreground/20" 
-                      : "bg-secondary/80 text-muted-foreground hover:bg-secondary hover:text-foreground border border-border/50 hover:border-border"
+                      ? "bg-primary text-white shadow-navy" 
+                      : "bg-white text-muted-foreground hover:text-foreground border border-border/50 shadow-soft hover:shadow-soft-md"
                     }
                   `}
                 >
@@ -294,7 +294,7 @@ export function Hero() {
                   
                   {/* Hover glow effect */}
                   {!isActive && (
-                    <span className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   )}
                 </button>
               );

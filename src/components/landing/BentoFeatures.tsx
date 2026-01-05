@@ -18,54 +18,54 @@ const features = [
     icon: Video,
     title: "Pitch Videos",
     description: "Record and share 60-second elevator pitches. Get discovered by investors and mentors worldwide.",
-    color: "from-rose-500/20 to-orange-500/20",
-    iconBg: "bg-rose-500/10",
-    iconColor: "text-rose-500",
+    color: "from-primary/10 to-teal-light/50",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
     span: "col-span-1 md:col-span-2",
   },
   {
     icon: Users,
     title: "Investor Network",
     description: "Connect with verified investors looking for the next big thing.",
-    color: "from-blue-500/20 to-cyan-500/20",
-    iconBg: "bg-blue-500/10",
-    iconColor: "text-blue-500",
+    color: "from-sky-light to-teal-light/30",
+    iconBg: "bg-sky/10",
+    iconColor: "text-sky",
     span: "col-span-1",
   },
   {
     icon: GraduationCap,
     title: "University Hubs",
     description: "Join your campus community and collaborate with peers.",
-    color: "from-violet-500/20 to-purple-500/20",
-    iconBg: "bg-violet-500/10",
-    iconColor: "text-violet-500",
+    color: "from-primary/8 to-sky-light/50",
+    iconBg: "bg-primary/8",
+    iconColor: "text-primary",
     span: "col-span-1",
   },
   {
     icon: Briefcase,
     title: "Mentorship",
     description: "Book 1:1 sessions with experienced founders and industry experts.",
-    color: "from-emerald-500/20 to-teal-500/20",
-    iconBg: "bg-emerald-500/10",
-    iconColor: "text-emerald-500",
+    color: "from-teal-light/50 to-sky-light/30",
+    iconBg: "bg-teal/10",
+    iconColor: "text-teal",
     span: "col-span-1 md:col-span-2",
   },
   {
     icon: MessageSquare,
     title: "Real-time Chat",
     description: "Instant messaging with voice notes, reactions, and file sharing.",
-    color: "from-amber-500/20 to-yellow-500/20",
-    iconBg: "bg-amber-500/10",
-    iconColor: "text-amber-500",
+    color: "from-sky-light/50 to-primary/5",
+    iconBg: "bg-sky/10",
+    iconColor: "text-sky",
     span: "col-span-1",
   },
   {
     icon: Sparkles,
     title: "Smart Matching",
     description: "AI-powered suggestions for co-founders, investors, and mentors.",
-    color: "from-pink-500/20 to-rose-500/20",
-    iconBg: "bg-pink-500/10",
-    iconColor: "text-pink-500",
+    color: "from-primary/10 to-teal-light/40",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
     span: "col-span-1",
   },
 ];
@@ -161,11 +161,11 @@ export function BentoFeatures() {
   };
 
   return (
-    <section ref={sectionRef} className="py-20 md:py-28 bg-background relative">
+    <section ref={sectionRef} className="py-20 md:py-28 bg-gradient-subtle relative">
       <div className="container px-4 md:px-6">
         {/* Heading */}
         <div ref={headingRef} className="text-center mb-12 md:mb-16 max-w-2xl mx-auto">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+          <span className="inline-block px-5 py-2 rounded-full bg-white text-primary text-sm font-medium mb-4 shadow-soft border border-border/30">
             Features
           </span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
@@ -189,8 +189,8 @@ export function BentoFeatures() {
                 onMouseLeave={handleMouseLeave}
                 className={`
                   ${feature.span}
-                  group relative p-6 md:p-8 rounded-2xl bg-card border border-border/50
-                  hover:border-border transition-all duration-300 cursor-pointer
+                  group relative p-6 md:p-8 rounded-3xl bg-white border border-border/30
+                  shadow-soft hover:shadow-soft-lg transition-all duration-300 cursor-pointer
                   overflow-hidden
                 `}
               >
@@ -202,8 +202,8 @@ export function BentoFeatures() {
                 {/* Content */}
                 <div className="relative z-10">
                   {/* Icon */}
-                  <div className={`feature-icon mb-4 p-3 rounded-xl ${feature.iconBg} w-fit`}>
-                    <Icon className={`w-6 h-6 ${feature.iconColor}`} />
+                  <div className={`feature-icon mb-4 p-3.5 rounded-2xl ${feature.iconBg} w-fit`}>
+                    <Icon className={`w-6 h-6 ${feature.iconColor}`} strokeWidth={1.5} />
                   </div>
                   
                   {/* Title with arrow */}
