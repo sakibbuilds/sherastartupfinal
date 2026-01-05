@@ -91,9 +91,9 @@ export function StatsSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-20 bg-background relative overflow-hidden">
+    <section ref={sectionRef} className="py-20 bg-white relative overflow-hidden">
       {/* Subtle background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-muted/30 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-light/30 via-transparent to-teal-light/20 pointer-events-none" />
       
       <div className="container relative z-10 px-4 md:px-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -104,11 +104,11 @@ export function StatsSection() {
               <div
                 key={stat.label}
                 ref={(el) => (cardRefs.current[index] = el)}
-                className="group relative p-6 md:p-8 rounded-2xl bg-card border border-border/50 hover:border-border transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
+                className="group relative p-6 md:p-8 rounded-3xl bg-white border border-border/30 shadow-soft hover:shadow-soft-lg transition-all duration-500 hover:-translate-y-1"
               >
                 {/* Icon */}
-                <div className="mb-4 p-3 rounded-xl bg-primary/10 w-fit group-hover:bg-primary/15 transition-colors duration-300">
-                  <Icon className="w-6 h-6 text-primary" />
+                <div className="mb-4 p-3.5 rounded-2xl bg-primary/8 w-fit group-hover:bg-primary/12 transition-colors duration-300">
+                  <Icon className="w-6 h-6 text-primary" strokeWidth={1.5} />
                 </div>
                 
                 {/* Counter */}
@@ -130,7 +130,7 @@ export function StatsSection() {
                 </span>
 
                 {/* Hover glow */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               </div>
             );
           })}

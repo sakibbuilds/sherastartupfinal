@@ -50,14 +50,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Accent colors
-        violet: {
-          DEFAULT: "hsl(var(--violet))",
-          light: "hsl(var(--violet-light))",
-          dark: "hsl(var(--violet-dark))",
+        // Accent colors - Soft Blue/Navy Palette
+        navy: {
+          DEFAULT: "hsl(var(--navy))",
+          light: "hsl(var(--navy-light))",
+          dark: "hsl(var(--navy-dark))",
+        },
+        teal: {
+          DEFAULT: "hsl(var(--teal))",
+          light: "hsl(var(--teal-light))",
+        },
+        sky: {
+          DEFAULT: "hsl(var(--sky))",
+          light: "hsl(var(--sky-light))",
         },
         mint: "hsl(var(--mint))",
-        sky: "hsl(var(--sky))",
         coral: "hsl(var(--coral))",
         pink: "hsl(var(--pink))",
         sidebar: {
@@ -75,17 +82,22 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-        "2xl": "1rem",
-        "3xl": "1.5rem",
-        "4xl": "2rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "2rem",
+        "4xl": "2.5rem",
       },
       boxShadow: {
-        'elevated': '0 4px 20px rgba(91, 77, 199, 0.08)',
-        'elevated-lg': '0 10px 40px rgba(91, 77, 199, 0.12)',
-        'purple': '0 10px 40px rgba(91, 77, 199, 0.2)',
-        'purple-lg': '0 20px 60px rgba(91, 77, 199, 0.25)',
-        'card': '0 4px 24px rgba(0, 0, 0, 0.06)',
-        'card-hover': '0 12px 40px rgba(91, 77, 199, 0.15)',
+        'soft': '0 4px 20px rgba(26, 58, 92, 0.06)',
+        'soft-md': '0 8px 30px rgba(26, 58, 92, 0.08)',
+        'soft-lg': '0 12px 40px rgba(26, 58, 92, 0.1)',
+        'soft-xl': '0 24px 60px rgba(26, 58, 92, 0.12)',
+        'card': '0 4px 24px rgba(26, 58, 92, 0.06)',
+        'card-hover': '0 16px 48px rgba(26, 58, 92, 0.12)',
+        'navy': '0 8px 30px rgba(26, 58, 92, 0.15)',
+        'navy-lg': '0 16px 50px rgba(26, 58, 92, 0.2)',
+        'btn': '0 4px 16px rgba(26, 58, 92, 0.15)',
+        'btn-hover': '0 8px 24px rgba(26, 58, 92, 0.2)',
       },
       keyframes: {
         "accordion-down": {

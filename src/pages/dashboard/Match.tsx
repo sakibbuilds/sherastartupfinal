@@ -393,7 +393,7 @@ const Match = () => {
                 
                 <Button
                   size="icon"
-                  className="h-16 w-16 rounded-full bg-mint hover:bg-mint/90"
+                  className="h-16 w-16 rounded-full bg-primary hover:bg-primary/90"
                   onClick={() => handleSwipe('like')}
                 >
                   <Heart className="h-8 w-8" />
@@ -402,7 +402,7 @@ const Match = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 rounded-full border-2 border-sky hover:bg-sky hover:text-white transition-colors"
+                  className="h-12 w-12 rounded-full border-2 border-primary/30 hover:bg-primary hover:text-white transition-colors"
                   onClick={() => handleSwipe('like')}
                 >
                   <Star className="h-5 w-5" />

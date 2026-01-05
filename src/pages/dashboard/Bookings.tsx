@@ -254,7 +254,7 @@ const Bookings = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return <Badge className="bg-mint text-white">Confirmed</Badge>;
+        return <Badge className="bg-primary text-white">Confirmed</Badge>;
       case 'pending':
         return <Badge variant="secondary">Pending</Badge>;
       case 'cancelled':
@@ -505,7 +505,7 @@ const Bookings = () => {
                             </>
                           )}
                           {booking.status === 'confirmed' && (
-                            <Button size="sm" className="bg-sky hover:bg-sky/90">
+                            <Button size="sm" className="bg-primary hover:bg-primary/90">
                               <Video className="h-4 w-4 mr-1" />
                               Join Session
                             </Button>
