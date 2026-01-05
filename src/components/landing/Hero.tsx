@@ -1,309 +1,296 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { 
-  Sparkles, 
-  Cpu, 
-  Briefcase, 
-  HeartHandshake, 
-  Palette, 
-  Code2, 
-  ShoppingBag, 
-  GraduationCap,
-  Gamepad2,
-  Stethoscope,
-  Banknote,
-  Rocket,
-  ArrowRight
-} from "lucide-react";
+import { ArrowRight, Star, Users, Rocket, TrendingUp, CheckCircle2 } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const categories = [
-  { label: "All", icon: Sparkles, active: true },
-  { label: "AI-Native", icon: Cpu },
-  { label: "Productivity", icon: Briefcase },
-  { label: "Community", icon: HeartHandshake },
-  { label: "Design", icon: Palette },
-  { label: "DevTools", icon: Code2 },
-  { label: "E-commerce", icon: ShoppingBag },
-  { label: "Education", icon: GraduationCap },
-  { label: "Gaming", icon: Gamepad2 },
-  { label: "Health", icon: Stethoscope },
-  { label: "Finance", icon: Banknote },
-];
-
 export function Hero() {
-  const [activeCategory, setActiveCategory] = useState("All");
   const { user } = useAuth();
   
   const heroRef = useRef<HTMLElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
-  const subheadRef = useRef<HTMLParagraphElement>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
-  const pillsRef = useRef<HTMLDivElement>(null);
-  const orb1Ref = useRef<HTMLDivElement>(null);
-  const orb2Ref = useRef<HTMLDivElement>(null);
-  const orb3Ref = useRef<HTMLDivElement>(null);
+  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const mockupRef = useRef<HTMLDivElement>(null);
+  const floatingCardsRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Timeline for coordinated entrance
+      // Main timeline
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      // Badge entrance
-      tl.fromTo(
-        badgeRef.current,
-        { opacity: 0, y: 20, scale: 0.9 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.6 },
-        0.2
-      );
-
-      // Split headline animation - letter by letter with blur
+      // Headline animation - word by word
       if (headlineRef.current) {
-        const text = headlineRef.current.innerText;
-        headlineRef.current.innerHTML = text
-          .split("")
-          .map((char) =>
-            char === " "
-              ? '<span class="inline-block">&nbsp;</span>'
-              : `<span class="inline-block">${char}</span>`
-          )
-          .join("");
-
-        const chars = headlineRef.current.querySelectorAll("span");
-        
-        tl.fromTo(
-          chars,
-          { opacity: 0, y: 40, filter: "blur(10px)", rotateX: -90 },
-          { 
-            opacity: 1, 
-            y: 0, 
-            filter: "blur(0px)", 
-            rotateX: 0,
-            duration: 0.8,
-            stagger: 0.02,
-            ease: "back.out(1.7)"
-          },
-          0.3
-        );
+        const words = headlineRef.current.querySelectorAll('.word');
+        tl.from(words, {
+          opacity: 0,
+          y: 60,
+          rotationX: -40,
+          stagger: 0.1,
+          duration: 0.8,
+        });
       }
 
-      // Subhead entrance
-      tl.fromTo(
-        subheadRef.current,
-        { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, duration: 0.8 },
-        0.8
-      );
+      // Subtitle fade in
+      tl.from(subtitleRef.current, {
+        opacity: 0,
+        y: 30,
+        duration: 0.6,
+      }, "-=0.4");
 
-      // Pills staggered entrance
-      if (pillsRef.current) {
-        const pills = pillsRef.current.querySelectorAll("button");
-        tl.fromTo(
-          pills,
-          { opacity: 0, y: 20, scale: 0.9 },
-          { 
-            opacity: 1, 
-            y: 0, 
-            scale: 1, 
-            duration: 0.5, 
-            stagger: 0.05,
-            ease: "back.out(1.5)"
-          },
-          1
-        );
-      }
-
-      // Floating orbs with parallax
-      gsap.to(orb1Ref.current, {
-        y: -30,
-        x: 20,
-        duration: 4,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-      });
-
-      gsap.to(orb2Ref.current, {
+      // CTA buttons
+      tl.from(ctaRef.current?.children || [], {
+        opacity: 0,
         y: 20,
-        x: -30,
-        duration: 5,
-        ease: "sine.inOut",
+        stagger: 0.1,
+        duration: 0.5,
+      }, "-=0.3");
+
+      // Stats bar
+      tl.from(statsRef.current, {
+        opacity: 0,
+        y: 20,
+        duration: 0.5,
+      }, "-=0.2");
+
+      // Phone mockup slide in
+      tl.from(mockupRef.current, {
+        opacity: 0,
+        x: 100,
+        scale: 0.9,
+        duration: 1,
+        ease: "power2.out",
+      }, "-=0.8");
+
+      // Floating cards stagger
+      if (floatingCardsRef.current) {
+        const cards = floatingCardsRef.current.children;
+        tl.from(cards, {
+          opacity: 0,
+          scale: 0.8,
+          y: 30,
+          stagger: 0.15,
+          duration: 0.6,
+        }, "-=0.6");
+      }
+
+      // Continuous floating animation for cards
+      gsap.to(".floating-card", {
+        y: -10,
+        duration: 2,
+        ease: "power1.inOut",
         yoyo: true,
         repeat: -1,
-        delay: 1,
+        stagger: 0.3,
       });
-
-      gsap.to(orb3Ref.current, {
-        y: -20,
-        x: 15,
-        duration: 6,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-        delay: 0.5,
-      });
-
-      // Parallax on scroll for orbs
-      gsap.to(orb1Ref.current, {
-        y: 100,
-        scrollTrigger: {
-          trigger: heroRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
-
-      gsap.to(orb2Ref.current, {
-        y: 150,
-        scrollTrigger: {
-          trigger: heroRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: 1.5,
-        },
-      });
-
     }, heroRef);
 
     return () => ctx.revert();
   }, []);
 
-  // Magnetic effect for pills
-  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const button = e.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-
-    gsap.to(button, {
-      x: x * 0.2,
-      y: y * 0.2,
-      duration: 0.3,
-      ease: "power2.out",
-    });
-  };
-
-  const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-    gsap.to(e.currentTarget, {
-      x: 0,
-      y: 0,
-      duration: 0.5,
-      ease: "elastic.out(1, 0.3)",
-    });
-  };
-
   return (
-    <section ref={heroRef} className="relative pt-24 pb-12 overflow-hidden bg-gradient-hero">
-      {/* Gradient Orbs - Soft blue tones */}
-      <div
-        ref={orb1Ref}
-        className="absolute top-20 left-[10%] w-[500px] h-[500px] rounded-full opacity-40 pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, hsl(200 70% 70% / 0.3) 0%, transparent 70%)",
-          filter: "blur(80px)",
-        }}
-      />
-      <div
-        ref={orb2Ref}
-        className="absolute top-40 right-[15%] w-[400px] h-[400px] rounded-full opacity-30 pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, hsl(195 60% 75% / 0.4) 0%, transparent 70%)",
-          filter: "blur(70px)",
-        }}
-      />
-      <div
-        ref={orb3Ref}
-        className="absolute bottom-0 left-[40%] w-[450px] h-[450px] rounded-full opacity-25 pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, hsl(210 50% 80% / 0.4) 0%, transparent 70%)",
-          filter: "blur(75px)",
-        }}
-      />
+    <section ref={heroRef} className="relative min-h-screen pt-32 pb-20 overflow-hidden bg-gradient-hero">
+      {/* Background decorations */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-50" />
+      <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-violet/5 rounded-full blur-3xl" />
+      
+      {/* Decorative lines */}
+      <div className="absolute top-40 left-10 w-32 h-32 border-l-2 border-t-2 border-primary/10 rounded-tl-3xl" />
+      <div className="absolute bottom-40 right-10 w-32 h-32 border-r-2 border-b-2 border-primary/10 rounded-br-3xl" />
 
-      {/* Subtle grid pattern */}
-      <div 
-        className="absolute inset-0 opacity-[0.02] pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
-                           linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
-          backgroundSize: "80px 80px",
-        }}
-      />
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          {/* Left Content */}
+          <div className="max-w-2xl">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-soft border border-border/50 mb-8">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-muted-foreground">
+                #1 University Startup Platform
+              </span>
+            </div>
 
-      <div className="container relative z-10 px-4 md:px-6">
-        {/* Header */}
-        <div className="text-center py-8 md:py-16 max-w-4xl mx-auto">
-          <div ref={badgeRef}>
-            <Badge 
-              variant="secondary" 
-              className="mb-6 px-5 py-2.5 text-sm font-medium bg-white text-primary border border-border/50 shadow-soft hover:shadow-soft-md transition-all cursor-default rounded-full"
-            >
-              <Rocket className="w-4 h-4 mr-2 text-primary" />
-              Curated directory of vibe-coded startups
-              <ArrowRight className="w-3 h-3 ml-2 text-muted-foreground" />
-            </Badge>
+            <h1 ref={headlineRef} className="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.1] mb-6">
+              <span className="word inline-block">Maximize</span>{" "}
+              <span className="word inline-block">Your</span>{" "}
+              <span className="word inline-block text-gradient">Startup</span>{" "}
+              <span className="word inline-block text-gradient">Potential</span>
+            </h1>
+
+            <p ref={subtitleRef} className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed max-w-xl">
+              Connect with investors, mentors, and co-founders. Launch your university startup with the tools and network you need to succeed.
+            </p>
+
+            <div ref={ctaRef} className="flex flex-wrap items-center gap-4 mb-10">
+              <Link to="/auth">
+                <Button size="lg" className="rounded-full bg-gradient-accent shadow-orange hover:shadow-orange hover:-translate-y-0.5 transition-all text-lg px-8 h-14">
+                  Learn More
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+
+              {/* Trustpilot badge */}
+              <div className="flex items-center gap-3 px-5 py-3 bg-white rounded-full shadow-soft border border-border/50">
+                <div className="flex items-center gap-1">
+                  <Star className="w-5 h-5 fill-green-500 text-green-500" />
+                  <span className="font-bold text-foreground">Trustpilot</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-foreground">4.8</span>
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-green-500 text-green-500" />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats bar */}
+            <div ref={statsRef} className="flex flex-wrap items-center gap-8">
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div 
+                      key={i} 
+                      className="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-medium"
+                      style={{ 
+                        backgroundImage: `linear-gradient(${45 + i * 30}deg, hsl(245 58% 51%), hsl(270 60% 55%))` 
+                      }}
+                    >
+                      {String.fromCharCode(64 + i)}
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p className="font-bold text-foreground">Downloaded more than</p>
+                  <p className="text-primary font-bold">5M+ in a year 🎉</p>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <h1 
-            ref={headlineRef}
-            className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight mb-6 text-foreground leading-[1.1]"
-            style={{ perspective: "1000px" }}
-          >
-            Discover University Startups
-          </h1>
-          
-          <p 
-            ref={subheadRef}
-            className="text-muted-foreground max-w-2xl mx-auto text-lg md:text-xl leading-relaxed"
-          >
-            Explore innovative startups built by university entrepreneurs. 
-            Connect with founders, investors, and mentors in one place.
-          </p>
-        </div>
 
-        {/* Category Pills - Horizontal Scrollable */}
-        <div className="relative -mx-4 px-4 md:mx-0 md:px-0">
-          <div ref={pillsRef} className="flex gap-3 overflow-x-auto pb-6 scrollbar-hide justify-start md:justify-center flex-wrap md:flex-nowrap">
-            {categories.map((category) => {
-              const Icon = category.icon;
-              const isActive = activeCategory === category.label;
-              
-              return (
-                <button
-                  key={category.label}
-                  onClick={() => setActiveCategory(category.label)}
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
-                  className={`
-                    group flex items-center gap-2.5 px-5 py-3 rounded-full text-sm font-medium 
-                    transition-all duration-300 whitespace-nowrap shrink-0 relative overflow-hidden
-                    ${isActive 
-                      ? "bg-primary text-white shadow-navy" 
-                      : "bg-white text-muted-foreground hover:text-foreground border border-border/50 shadow-soft hover:shadow-soft-md"
-                    }
-                  `}
-                >
-                  <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? "" : "group-hover:scale-110"}`} />
-                  <span className="relative z-10">{category.label}</span>
-                  
-                  {/* Hover glow effect */}
-                  {!isActive && (
-                    <span className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  )}
-                </button>
-              );
-            })}
+          {/* Right Content - Phone Mockup */}
+          <div ref={mockupRef} className="relative flex justify-center lg:justify-end">
+            {/* Main Phone */}
+            <div className="phone-mockup w-[320px] relative z-10">
+              <div className="phone-screen aspect-[9/19] p-4">
+                {/* App Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
+                      <Rocket className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-bold text-foreground text-sm">SheraStartup</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                    <span className="text-xs">👋</span>
+                  </div>
+                </div>
+
+                {/* Welcome Card */}
+                <div className="bg-gradient-primary rounded-2xl p-4 mb-4 text-white">
+                  <p className="text-sm opacity-90">Hello, Kavsar Ahmed 👋</p>
+                  <h3 className="font-bold text-lg mt-1">Brand New Website Design</h3>
+                  <div className="flex items-center gap-2 mt-3">
+                    <div className="px-3 py-1 bg-white/20 rounded-full text-xs">Start →</div>
+                  </div>
+                </div>
+
+                {/* Task List */}
+                <div className="bg-white rounded-2xl p-4 shadow-soft border border-border/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-sm text-foreground">Tasks List</h4>
+                    <span className="text-xs text-primary">+ Add Task</span>
+                  </div>
+                  {[
+                    { title: "Super Portraid", progress: 12 },
+                    { title: "Medium Builder", progress: 45 },
+                    { title: "Apps Package", progress: 78 },
+                  ].map((task, i) => (
+                    <div key={i} className="flex items-center gap-3 py-2 border-b border-border/30 last:border-0">
+                      <CheckCircle2 className={`w-4 h-4 ${i === 2 ? "text-green-500" : "text-muted-foreground"}`} />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-foreground">{task.title}</p>
+                        <div className="w-full bg-secondary rounded-full h-1 mt-1">
+                          <div 
+                            className="bg-gradient-primary h-1 rounded-full" 
+                            style={{ width: `${task.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{task.progress}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Cards */}
+            <div ref={floatingCardsRef} className="absolute inset-0 pointer-events-none">
+              {/* Custom Workflow Card */}
+              <div className="floating-card absolute -left-20 top-20 bg-white rounded-2xl p-4 shadow-soft-lg border border-border/30 w-48">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                </div>
+                <h4 className="font-semibold text-sm text-foreground">Custom Workflow</h4>
+                <p className="text-xs text-muted-foreground mt-1">Build apps to manage your projects</p>
+                {/* Mini chart */}
+                <div className="flex items-end gap-1 mt-3 h-8">
+                  {[30, 45, 25, 60, 40, 70, 50].map((h, i) => (
+                    <div 
+                      key={i} 
+                      className="flex-1 bg-primary/20 rounded-sm"
+                      style={{ height: `${h}%` }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Multi-team Card */}
+              <div className="floating-card absolute -left-16 bottom-32 bg-white rounded-2xl p-4 shadow-soft-lg border border-border/30 w-52" style={{ animationDelay: "0.3s" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-5 h-5 text-primary" />
+                  <h4 className="font-semibold text-sm text-foreground">Multi-team projects</h4>
+                </div>
+                <p className="text-xs text-muted-foreground">Collaborate with founders across universities</p>
+                <div className="flex -space-x-2 mt-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div 
+                      key={i}
+                      className="w-8 h-8 rounded-full border-2 border-white"
+                      style={{ 
+                        background: `linear-gradient(${i * 45}deg, hsl(${200 + i * 20} 60% 50%), hsl(${220 + i * 20} 70% 60%))` 
+                      }}
+                    />
+                  ))}
+                  <div className="w-8 h-8 rounded-full border-2 border-white bg-primary/10 flex items-center justify-center">
+                    <span className="text-xs font-medium text-primary">5+</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Card */}
+              <div className="floating-card absolute right-0 top-8 bg-white rounded-2xl p-4 shadow-soft-lg border border-border/30" style={{ animationDelay: "0.6s" }}>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-gradient">29M+</p>
+                  <p className="text-xs text-muted-foreground mt-1">Installed over the time</p>
+                </div>
+              </div>
+
+              {/* Tasks Completed */}
+              <div className="floating-card absolute right-4 bottom-20 bg-gradient-primary rounded-2xl p-4 shadow-purple text-white w-40" style={{ animationDelay: "0.9s" }}>
+                <p className="text-2xl font-bold">100M+</p>
+                <p className="text-xs opacity-90 mt-1">Total tasks overall completed</p>
+              </div>
+            </div>
           </div>
-          
-          {/* Fade edges on mobile */}
-          <div className="absolute right-0 top-0 bottom-6 w-16 bg-gradient-to-l from-background to-transparent pointer-events-none md:hidden" />
-          <div className="absolute left-0 top-0 bottom-6 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none md:hidden" />
         </div>
       </div>
     </section>
