@@ -94,10 +94,12 @@ const Feed = () => {
     }
     setLikedPosts(newLikedPosts);
 
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { ...post, likes_count: post.likes_count + (isLiked ? -1 : 1) }
-        : post
+    const post = posts.find(p => p.id === postId);
+
+    setPosts(posts.map(p => 
+      p.id === postId 
+        ? { ...p, likes_count: p.likes_count + (isLiked ? -1 : 1) }
+        : p
     ));
 
     if (isLiked) {
@@ -107,9 +109,27 @@ const Feed = () => {
         .eq('post_id', postId)
         .eq('user_id', user.id);
     } else {
-      await supabase
+      const { error } = await supabase
         .from('post_likes')
         .insert({ post_id: postId, user_id: user.id });
+      
+      // Send notification to post owner (if not liking own post)
+      if (!error && post && post.user_id !== user.id) {
+        try {
+          await supabase.functions.invoke('create-notification', {
+            body: {
+              user_id: post.user_id,
+              type: 'like',
+              title: 'New like on your post',
+              message: `Someone liked your post`,
+              reference_id: postId,
+              reference_type: 'post'
+            }
+          });
+        } catch (err) {
+          console.error('Error sending notification:', err);
+        }
+      }
     }
   };
 
