@@ -133,7 +133,7 @@ const Onboarding = () => {
     }
 
     if (data?.onboarding_completed) {
-      navigate('/dashboard/feed', { replace: true });
+      navigate('/dashboard', { replace: true });
     } else if (data?.full_name) {
       setFullName(data.full_name);
     }
@@ -228,7 +228,7 @@ const Onboarding = () => {
       toast({ title: 'Error', description: 'Failed to complete onboarding', variant: 'destructive' });
     } else {
       toast({ title: 'Welcome to SheraStartup!', description: 'Your profile is set up.' });
-      navigate('/dashboard/feed', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
 
     setLoading(false);
