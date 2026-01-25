@@ -95,6 +95,10 @@ const App = () => (
                 <Route path="tools/pitch-deck" element={<PitchDeck />} />
                 <Route path="tools/biz-simulation" element={<BizSimulation />} />
                 <Route path="tools/investment-simulation" element={<InvestmentSimulation />} />
+                <Route path="tools/idea-validator" element={<IdeaValidator />} />
+                <Route path="tools/market-sizing" element={<MarketSizing />} />
+                <Route path="tools/financial-projections" element={<FinancialProjections />} />
+                <Route path="tools/valuation-calculator" element={<ValuationCalculator />} />
                 <Route path="startups" element={<Startups />} />
                 <Route path="startups/:startupId" element={<StartupDetails />} />
                 <Route path="founders" element={<Founders />} />
