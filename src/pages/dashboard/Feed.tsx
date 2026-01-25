@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Widgets
 import { SuggestedFounders } from '@/components/dashboard/widgets/SuggestedFounders';
 import { UniversityNetwork } from '@/components/dashboard/widgets/UniversityNetwork';
+import { LeftSideAdBanner } from '@/components/dashboard/widgets/LeftSideAdBanner';
 import { TrendingStartups } from '@/components/dashboard/widgets/TrendingStartups';
 import { UniversityStartups } from '@/components/dashboard/widgets/UniversityStartups';
 import { TrendingTopics } from '@/components/dashboard/widgets/TrendingTopics';
@@ -161,6 +162,7 @@ const Feed = () => {
         
         {/* Left Sidebar */}
         <div className="hidden lg:block space-y-6 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto pr-4 scrollbar-hide">
+          <LeftSideAdBanner />
           <SuggestedFounders />
           <UniversityNetwork />
         </div>
