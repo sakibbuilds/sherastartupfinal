@@ -68,36 +68,36 @@ export function Footer() {
   ];
 
   return (
-    <footer ref={footerRef} className="bg-foreground text-white pt-20 pb-8">
+    <footer ref={footerRef} className="bg-primary text-white pt-20 pb-8">
       <div ref={contentRef} className="container mx-auto px-6">
         <div className="grid lg:grid-cols-5 gap-12 mb-16">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
+            <Link to="/" className="flex items-center gap-2.5 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                 <Rocket className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold">
-                Shera<span className="text-primary">Startup</span>
+                Shera<span className="text-accent">Startup</span>
               </span>
             </Link>
 
-            <p className="text-white/60 mb-8 max-w-sm leading-relaxed">
+            <p className="text-white/70 mb-8 max-w-sm leading-relaxed">
               Connect with investors, mentors, and co-founders. The ultimate platform for university entrepreneurs.
             </p>
 
             {/* Newsletter */}
             <div className="mb-8">
-              <h4 className="font-semibold mb-3">Quick Notice & Updates</h4>
-              <p className="text-white/60 text-sm mb-4">Get our latest updates, offers and tips right in your inbox.</p>
+              <h4 className="font-semibold mb-3">Stay Updated</h4>
+              <p className="text-white/60 text-sm mb-4">Get the latest updates, news and tips right in your inbox.</p>
               <div className="flex gap-2">
                 <Input 
                   type="email" 
                   placeholder="Enter your email..." 
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-full"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:border-accent"
                 />
-                <Button className="rounded-full bg-gradient-accent shadow-orange px-6">
-                  Get it Now
+                <Button className="rounded-xl bg-accent hover:bg-accent/90 text-white px-6 shadow-emerald">
+                  Subscribe
                 </Button>
               </div>
             </div>
@@ -132,7 +132,7 @@ export function Footer() {
               <a
                 key={social.label}
                 href={social.href}
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
                 aria-label={social.label}
               >
                 <social.icon className="w-5 h-5" />
@@ -152,7 +152,7 @@ export function Footer() {
             className="group flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
           >
             Back to top
-            <span className="p-1.5 rounded-lg bg-white/10 group-hover:bg-primary transition-colors">
+            <span className="p-1.5 rounded-lg bg-white/10 group-hover:bg-accent transition-colors">
               <ArrowUp className="w-3 h-3" />
             </span>
           </button>

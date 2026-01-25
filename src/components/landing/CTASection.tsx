@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Rocket, Bell, Users, TrendingUp } from "lucide-react";
+import { ArrowRight, Rocket, Bell, Users, TrendingUp, CheckCircle } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -12,7 +12,6 @@ export const CTASection = () => {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Animate content
       gsap.from(".cta-content", {
         scrollTrigger: {
           trigger: ".cta-content",
@@ -24,7 +23,6 @@ export const CTASection = () => {
         ease: "power3.out",
       });
 
-      // Animate phone mockup
       gsap.from(".cta-phone", {
         scrollTrigger: {
           trigger: ".cta-phone",
@@ -37,7 +35,6 @@ export const CTASection = () => {
         ease: "power2.out",
       });
 
-      // Animate floating elements
       gsap.from(".cta-float", {
         scrollTrigger: {
           trigger: ".cta-phone",
@@ -50,7 +47,6 @@ export const CTASection = () => {
         ease: "back.out(1.7)",
       });
 
-      // Continuous float animation
       gsap.to(".cta-float", {
         y: -8,
         duration: 2.5,
@@ -63,6 +59,13 @@ export const CTASection = () => {
 
     return () => ctx.revert();
   }, []);
+
+  const benefits = [
+    "Connect with verified investors",
+    "Get mentorship from industry experts",
+    "Access exclusive startup resources",
+    "Join a global founder community",
+  ];
 
   return (
     <section ref={sectionRef} className="py-24 bg-gradient-subtle relative overflow-hidden">
@@ -79,7 +82,7 @@ export const CTASection = () => {
                 {/* App UI */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-dark flex items-center justify-center">
                       <Rocket className="w-4 h-4 text-white" />
                     </div>
                   </div>
@@ -90,10 +93,10 @@ export const CTASection = () => {
                   </div>
                 </div>
 
-                {/* Brand New Card */}
-                <div className="bg-gradient-to-br from-green-400 to-cyan-500 rounded-2xl p-4 mb-4 text-white">
-                  <p className="text-sm opacity-90">Brand New</p>
-                  <h3 className="font-bold text-lg">Website Design</h3>
+                {/* Success Card */}
+                <div className="bg-gradient-accent rounded-2xl p-4 mb-4 text-white">
+                  <p className="text-sm opacity-90">Congratulations! 🎉</p>
+                  <h3 className="font-bold text-lg">Funding Secured</h3>
                   <div className="flex items-center gap-2 mt-4">
                     <div className="flex -space-x-2">
                       {[1, 2, 3].map((i) => (
@@ -103,70 +106,81 @@ export const CTASection = () => {
                         />
                       ))}
                     </div>
-                    <span className="text-xs opacity-80">+12 more</span>
+                    <span className="text-xs opacity-80">+5 investors joined</span>
                   </div>
                 </div>
 
                 {/* Progress Card */}
-                <div className="bg-white rounded-2xl p-4 shadow-soft border border-border/30">
+                <div className="bg-card rounded-2xl p-4 shadow-soft border border-border/30">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-muted-foreground">Progress</span>
-                    <span className="text-xs font-medium text-primary">75%</span>
+                    <span className="text-xs text-muted-foreground">Funding Progress</span>
+                    <span className="text-xs font-medium text-accent">85%</span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
-                    <div className="bg-gradient-primary h-2 rounded-full w-3/4" />
+                    <div className="bg-gradient-accent h-2 rounded-full w-[85%]" />
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">$850K of $1M goal</p>
                 </div>
 
-                {/* Complete Button */}
+                {/* Action Button */}
                 <div className="mt-4">
-                  <button className="w-full py-3 bg-gradient-primary rounded-xl text-white font-medium shadow-purple">
-                    Complete
+                  <button className="w-full py-3 bg-gradient-dark rounded-xl text-white font-medium shadow-navy">
+                    View Details
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Floating Elements */}
-            <div className="cta-float absolute top-0 -right-4 bg-white rounded-2xl p-3 shadow-soft-lg border border-border/30">
+            <div className="cta-float absolute top-0 -right-4 bg-card rounded-2xl p-3 shadow-soft-lg border border-border">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-green-600" />
+                <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-accent" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Growth</p>
-                  <p className="font-bold text-sm text-foreground">+24.5%</p>
+                  <p className="font-bold text-sm text-foreground">+124%</p>
                 </div>
               </div>
             </div>
 
-            <div className="cta-float absolute bottom-20 -right-8 bg-gradient-primary rounded-2xl p-4 shadow-purple text-white">
+            <div className="cta-float absolute bottom-20 -right-8 bg-gradient-dark rounded-2xl p-4 shadow-navy text-white">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                <span className="font-bold">2.4k</span>
+                <span className="font-bold">5.2k</span>
               </div>
-              <p className="text-xs opacity-80 mt-1">Active users</p>
+              <p className="text-xs opacity-80 mt-1">Active founders</p>
             </div>
           </div>
 
           {/* Right - Content */}
           <div className="cta-content order-1 lg:order-2">
             <h2 className="text-4xl md:text-5xl font-bold text-foreground leading-tight mb-6">
-              Ready? Let's Start with{" "}
-              <span className="text-gradient">SheraStartup</span>{" "}
-              and Get Awesome Experience
+              Ready to Build the{" "}
+              <span className="text-gradient-accent">Next Big Thing?</span>
             </h2>
 
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Define unique value states for each team. User can define the steps, rules 
-              and actions that make up their custom workflow. User can define the stages, 
-              steps, and actions that make up their custom workflow.
+              Join thousands of university entrepreneurs who are building, 
+              launching, and scaling their startups with SheraStartup.
             </p>
 
+            {/* Benefits list */}
+            <ul className="space-y-4 mb-8">
+              {benefits.map((benefit, index) => (
+                <li key={index} className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-accent" />
+                  </div>
+                  <span className="text-foreground font-medium">{benefit}</span>
+                </li>
+              ))}
+            </ul>
+
             <Link to="/auth">
-              <Button size="lg" className="rounded-full bg-gradient-accent shadow-orange hover:shadow-orange hover:-translate-y-0.5 transition-all text-lg px-8 h-14">
-                Learn More
-                <ArrowRight className="w-5 h-5 ml-2" />
+              <Button variant="hero" className="group">
+                Start Your Journey
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </div>

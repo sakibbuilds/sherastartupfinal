@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Database, Paperclip, Users2, Calendar, Clock } from "lucide-react";
+import { Database, Paperclip, Users2, Calendar, Clock, Shield, Zap, Globe } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -10,7 +10,6 @@ export const FeaturesSection = () => {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Animate heading
       gsap.from(".features-heading", {
         scrollTrigger: {
           trigger: ".features-heading",
@@ -22,7 +21,6 @@ export const FeaturesSection = () => {
         ease: "power3.out",
       });
 
-      // Animate feature cards
       gsap.from(".feature-card", {
         scrollTrigger: {
           trigger: ".features-grid",
@@ -35,7 +33,6 @@ export const FeaturesSection = () => {
         ease: "power3.out",
       });
 
-      // Animate mockup
       gsap.from(".features-mockup", {
         scrollTrigger: {
           trigger: ".features-mockup",
@@ -47,7 +44,6 @@ export const FeaturesSection = () => {
         ease: "power2.out",
       });
 
-      // Animate floating elements
       gsap.from(".features-float-card", {
         scrollTrigger: {
           trigger: ".features-mockup",
@@ -66,26 +62,26 @@ export const FeaturesSection = () => {
 
   const features = [
     {
-      icon: Database,
-      title: "Data Sync and Backup",
-      description: "Users' tasks and app settings are synchronized across multiple devices.",
+      icon: Shield,
+      title: "Verified Network",
+      description: "Connect with verified founders, mentors, and investors from top universities.",
     },
     {
-      icon: Paperclip,
-      title: "Task Attachments",
-      description: "Users can attach files, documents, or links to tasks, providing additional context.",
+      icon: Zap,
+      title: "Smart Matching",
+      description: "AI-powered matching connects you with the right people for your startup journey.",
     },
     {
-      icon: Users2,
-      title: "Task Collaboration",
-      description: "Users can collaborate with other users on tasks, allowing them to work together.",
+      icon: Globe,
+      title: "Global Reach",
+      description: "Access a network of entrepreneurs and investors from 500+ universities worldwide.",
     },
   ];
 
   return (
-    <section ref={sectionRef} className="py-24 bg-white relative overflow-hidden">
+    <section ref={sectionRef} className="py-24 bg-card relative overflow-hidden">
       {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl" />
       
       <div className="container mx-auto px-6 relative z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -96,42 +92,43 @@ export const FeaturesSection = () => {
               <div className="phone-screen aspect-[9/19] p-4 flex flex-col">
                 {/* Task Cards */}
                 <div className="space-y-3 flex-1">
-                  <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
+                  <div className="bg-accent/10 rounded-xl p-3 border border-accent/20">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded-lg bg-gradient-primary flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-lg bg-gradient-accent flex items-center justify-center">
                         <span className="text-white text-xs">✓</span>
                       </div>
-                      <span className="text-xs font-medium text-foreground">Create Smart Style Guide Brand</span>
+                      <span className="text-xs font-medium text-foreground">Pitch Deck Review Complete</span>
                     </div>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Know Website</span>
+                      <span>AI Startup</span>
                       <div className="flex -space-x-1">
                         {[1, 2, 3].map((i) => (
                           <div 
                             key={i}
-                            className="w-5 h-5 rounded-full border border-white bg-gradient-primary"
+                            className="w-5 h-5 rounded-full border border-card"
+                            style={{ backgroundColor: `hsl(${160 + i * 20} 60% 45%)` }}
                           />
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl p-3 shadow-soft border border-border/30">
+                  <div className="bg-card rounded-xl p-3 shadow-soft border border-border/30">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded-lg bg-accent/20 flex items-center justify-center">
-                        <span className="text-accent text-xs">◆</span>
+                      <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <span className="text-primary text-xs">◆</span>
                       </div>
-                      <span className="text-xs font-medium text-foreground">Create Smart Style Guide Brand</span>
+                      <span className="text-xs font-medium text-foreground">Investor Meeting Scheduled</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Know Website</p>
+                    <p className="text-xs text-muted-foreground">Tomorrow at 2:00 PM</p>
                   </div>
 
-                  <div className="bg-white rounded-xl p-3 shadow-soft border border-border/30">
+                  <div className="bg-card rounded-xl p-3 shadow-soft border border-border/30">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-green-100 flex items-center justify-center">
-                        <span className="text-green-600 text-xs">✓</span>
+                      <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center">
+                        <span className="text-accent text-xs">★</span>
                       </div>
-                      <span className="text-xs font-medium text-foreground">Website Design Review</span>
+                      <span className="text-xs font-medium text-foreground">New Mentor Connection</span>
                     </div>
                   </div>
                 </div>
@@ -142,7 +139,7 @@ export const FeaturesSection = () => {
                     {[40, 60, 35, 80, 55, 75, 45, 65, 50, 70].map((h, i) => (
                       <div 
                         key={i}
-                        className="flex-1 bg-gradient-primary rounded-sm opacity-60"
+                        className="flex-1 bg-gradient-accent rounded-sm opacity-70"
                         style={{ height: `${h}%` }}
                       />
                     ))}
@@ -152,28 +149,28 @@ export const FeaturesSection = () => {
             </div>
 
             {/* Floating Cards */}
-            <div className="features-float-card absolute -right-4 top-20 bg-white rounded-2xl p-4 shadow-soft-lg border border-border/30 w-52">
+            <div className="features-float-card absolute -right-4 top-20 bg-card rounded-2xl p-4 shadow-soft-lg border border-border w-52">
               <div className="flex items-center gap-3 mb-3">
-                <Calendar className="w-5 h-5 text-primary" />
+                <Calendar className="w-5 h-5 text-accent" />
                 <div>
-                  <p className="font-semibold text-sm text-foreground">Create Task</p>
-                  <p className="text-xs text-muted-foreground">11 August 2022</p>
+                  <p className="font-semibold text-sm text-foreground">Mentor Session</p>
+                  <p className="text-xs text-muted-foreground">Today at 3:00 PM</p>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="px-2 py-1 bg-primary/10 rounded-full text-xs font-medium text-primary">App Design</span>
-                <span className="text-xs text-muted-foreground">5 Comments</span>
+                <span className="px-2 py-1 bg-accent/10 rounded-full text-xs font-medium text-accent">Growth Strategy</span>
+                <span className="text-xs text-muted-foreground">3 Topics</span>
               </div>
             </div>
 
-            <div className="features-float-card absolute -right-8 bottom-24 bg-white rounded-2xl p-4 shadow-soft-lg border border-border/30">
+            <div className="features-float-card absolute -right-8 bottom-24 bg-card rounded-2xl p-4 shadow-soft-lg border border-border">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-accent" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Working Hours</p>
-                  <p className="font-bold text-xl text-foreground">64:52:00 <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">Live</span></p>
+                  <p className="text-sm text-muted-foreground">Total Connections</p>
+                  <p className="font-bold text-xl text-foreground">1,248 <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">+24%</span></p>
                 </div>
               </div>
             </div>
@@ -183,8 +180,8 @@ export const FeaturesSection = () => {
           <div>
             <div className="features-heading mb-10">
               <h2 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
-                Comprehensive Feature Set{" "}
-                <span className="text-gradient">of a Startup Platform</span>
+                Everything You Need to{" "}
+                <span className="text-gradient-accent">Launch & Scale</span>
               </h2>
             </div>
 
@@ -192,9 +189,9 @@ export const FeaturesSection = () => {
               {features.map((feature, index) => (
                 <div 
                   key={index}
-                  className="feature-card flex items-start gap-4 p-5 bg-secondary/50 rounded-2xl hover:bg-secondary transition-colors"
+                  className="feature-card flex items-start gap-4 p-5 bg-secondary/50 rounded-2xl hover:bg-secondary transition-colors border border-border/30"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shrink-0 shadow-purple">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-dark flex items-center justify-center shrink-0 shadow-navy">
                     <feature.icon className="w-6 h-6 text-white" />
                   </div>
                   <div>
