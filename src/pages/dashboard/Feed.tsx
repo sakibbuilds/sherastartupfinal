@@ -9,6 +9,7 @@ import { SuggestedFounders } from '@/components/dashboard/widgets/SuggestedFound
 import { UniversityNetwork } from '@/components/dashboard/widgets/UniversityNetwork';
 import { LeftSideAdBanner } from '@/components/dashboard/widgets/LeftSideAdBanner';
 import { TrendingStartups } from '@/components/dashboard/widgets/TrendingStartups';
+import { StudyAbroadAdBanner } from '@/components/dashboard/widgets/StudyAbroadAdBanner';
 import { UniversityStartups } from '@/components/dashboard/widgets/UniversityStartups';
 import { TrendingTopics } from '@/components/dashboard/widgets/TrendingTopics';
 import { AdBanner } from '@/components/dashboard/widgets/AdBanner';
@@ -215,6 +216,7 @@ const Feed = () => {
           <TrendingTopics />
           <TrendingStartups />
           <UniversityStartups />
+          <StudyAbroadAdBanner />
         </div>
 
       </div>
