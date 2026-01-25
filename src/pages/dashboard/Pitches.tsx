@@ -356,7 +356,7 @@ const Pitches = () => {
     } else {
       const { error } = await supabase
         .from('video_pitch_likes')
-        .insert({ video_id: pitch.id, user_id: user.id });
+        .insert({ pitch_id: pitch.id, user_id: user.id });
       
       if (error) {
         setPitches(prev => prev.map(p => 
@@ -371,7 +371,7 @@ const Pitches = () => {
     const { data } = await supabase
       .from('video_pitch_comments')
       .select('*')
-      .eq('video_id', videoId)
+      .eq('pitch_id', videoId)
       .order('created_at', { ascending: true });
 
     if (data) {
@@ -408,7 +408,7 @@ const Pitches = () => {
     const { error } = await supabase
       .from('video_pitch_comments')
       .insert({
-        video_id: filteredPitches[currentIndex].id,
+        pitch_id: filteredPitches[currentIndex].id,
         user_id: user.id,
         content: newComment.trim()
       });

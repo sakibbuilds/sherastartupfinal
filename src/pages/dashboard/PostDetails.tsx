@@ -60,7 +60,7 @@ const PostDetails = () => {
         .eq('founder_id', data.user_id)
         .maybeSingle();
         
-      setPost({ ...data, profiles: profile, startup } as Post);
+      setPost({ ...data, profiles: profile, startup, likes_count: 0, comments_count: 0 } as Post);
     }
     setLoading(false);
   };

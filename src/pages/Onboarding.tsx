@@ -193,12 +193,12 @@ const Onboarding = () => {
       updateData.investment_range_max = investmentRangeMax ? parseFloat(investmentRangeMax) : null;
     }
 
-    // Also add user role
+    // Also add user role - use 'user' as default since 'mentor' and 'mentee' aren't valid enum values
     await supabase
       .from('user_roles')
       .upsert({
         user_id: user.id,
-        role: userType === 'investor' ? 'mentor' : userType === 'founder' ? 'mentee' : 'mentee'
+        role: 'user' as const
       });
 
     const { error } = await supabase

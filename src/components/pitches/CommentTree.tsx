@@ -68,7 +68,7 @@ const CommentNode = ({
     const { error } = await supabase
       .from('video_pitch_comments')
       .insert({
-        video_id: videoId,
+        pitch_id: videoId,
         user_id: user.id,
         content: replyContent.trim(),
         parent_id: comment.id
