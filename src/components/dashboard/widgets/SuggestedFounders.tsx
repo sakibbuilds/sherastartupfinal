@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ interface SuggestedFoundersProps {
   displayMode?: 'list' | 'carousel';
 }
 
-export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersProps) => {
+export const SuggestedFounders = forwardRef<HTMLDivElement, SuggestedFoundersProps>(({ displayMode = 'list' }, ref) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [founders, setFounders] = useState<any[]>([]);
@@ -37,7 +37,7 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
 
   if (displayMode === 'carousel') {
     return (
-      <div className="mb-4">
+      <div ref={ref} className="mb-4">
         <h3 className="font-semibold text-sm mb-2 px-1">Founders you may connect</h3>
         <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 scrollbar-hide">
           {founders.map((founder) => (
@@ -72,7 +72,7 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
   }
 
   return (
-    <Card className="glass-card">
+    <Card ref={ref} className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold">Founders you may connect</CardTitle>
       </CardHeader>
@@ -103,4 +103,6 @@ export const SuggestedFounders = ({ displayMode = 'list' }: SuggestedFoundersPro
       </CardContent>
     </Card>
   );
-};
+});
+
+SuggestedFounders.displayName = 'SuggestedFounders';

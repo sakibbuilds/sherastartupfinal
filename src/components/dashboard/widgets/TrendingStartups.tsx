@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ interface TrendingStartupsProps {
   displayMode?: 'list' | 'carousel';
 }
 
-export const TrendingStartups = ({ displayMode = 'list' }: TrendingStartupsProps) => {
+export const TrendingStartups = forwardRef<HTMLDivElement, TrendingStartupsProps>(({ displayMode = 'list' }, ref) => {
   const navigate = useNavigate();
   const [startups, setStartups] = useState<any[]>([]);
 
@@ -31,7 +31,7 @@ export const TrendingStartups = ({ displayMode = 'list' }: TrendingStartupsProps
 
   if (displayMode === 'carousel') {
     return (
-      <div className="mb-4">
+      <div ref={ref} className="mb-4">
         <h3 className="font-semibold text-sm mb-2 px-1 flex items-center gap-2">
           <TrendingUp className="h-4 w-4" /> Trending Startups
         </h3>
@@ -60,7 +60,7 @@ export const TrendingStartups = ({ displayMode = 'list' }: TrendingStartupsProps
   }
 
   return (
-    <Card className="glass-card">
+    <Card ref={ref} className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <TrendingUp className="h-4 w-4" />
@@ -91,4 +91,6 @@ export const TrendingStartups = ({ displayMode = 'list' }: TrendingStartupsProps
       </CardContent>
     </Card>
   );
-};
+});
+
+TrendingStartups.displayName = 'TrendingStartups';

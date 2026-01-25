@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ interface UniversityNetworkProps {
   displayMode?: 'list' | 'carousel';
 }
 
-export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkProps) => {
+export const UniversityNetwork = forwardRef<HTMLDivElement, UniversityNetworkProps>(({ displayMode = 'list' }, ref) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [network, setNetwork] = useState<any[]>([]);
@@ -48,7 +48,7 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
 
   if (displayMode === 'carousel') {
     return (
-      <div className="mb-4">
+      <div ref={ref} className="mb-4">
         <h3 className="font-semibold text-sm mb-2 px-1 flex items-center gap-2">
           <GraduationCap className="h-4 w-4" /> Your University Network
         </h3>
@@ -86,7 +86,7 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
   }
 
   return (
-    <Card className="glass-card">
+    <Card ref={ref} className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <GraduationCap className="h-4 w-4" />
@@ -120,4 +120,6 @@ export const UniversityNetwork = ({ displayMode = 'list' }: UniversityNetworkPro
       </CardContent>
     </Card>
   );
-};
+});
+
+UniversityNetwork.displayName = 'UniversityNetwork';
