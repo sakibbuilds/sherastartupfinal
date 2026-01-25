@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Hash } from 'lucide-react';
@@ -8,7 +8,7 @@ interface TrendingTopicsProps {
   displayMode?: 'list' | 'carousel';
 }
 
-export const TrendingTopics = ({ displayMode = 'list' }: TrendingTopicsProps) => {
+export const TrendingTopics = forwardRef<HTMLDivElement, TrendingTopicsProps>(({ displayMode = 'list' }, ref) => {
   const [topics, setTopics] = useState<{name: string, count: number}[]>([]);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export const TrendingTopics = ({ displayMode = 'list' }: TrendingTopicsProps) =>
 
   if (displayMode === 'carousel') {
     return (
-      <div className="mb-4">
+      <div ref={ref} className="mb-4">
         <h3 className="font-semibold text-sm mb-2 px-1 flex items-center gap-2">
           <Hash className="h-4 w-4" /> Trending Topics
         </h3>
@@ -71,7 +71,7 @@ export const TrendingTopics = ({ displayMode = 'list' }: TrendingTopicsProps) =>
   }
 
   return (
-    <Card className="glass-card">
+    <Card ref={ref} className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Hash className="h-4 w-4" />
@@ -83,11 +83,12 @@ export const TrendingTopics = ({ displayMode = 'list' }: TrendingTopicsProps) =>
           {topics.map((topic) => (
             <Badge key={topic.name} variant="secondary" className="cursor-pointer hover:bg-secondary/80">
               #{topic.name}
-              {/* <span className="ml-1 text-[10px] opacity-60">{topic.count}</span> */}
             </Badge>
           ))}
         </div>
       </CardContent>
     </Card>
   );
-};
+});
+
+TrendingTopics.displayName = 'TrendingTopics';
