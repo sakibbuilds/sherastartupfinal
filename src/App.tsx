@@ -35,7 +35,10 @@ import ElevatorPitch from "./pages/dashboard/ElevatorPitch";
 import PitchDeck from "./pages/dashboard/PitchDeck";
 import BizSimulation from "./pages/dashboard/BizSimulation";
 import InvestmentSimulation from "./pages/dashboard/InvestmentSimulation";
-
+import IdeaValidator from "./pages/dashboard/IdeaValidator";
+import MarketSizing from "./pages/dashboard/MarketSizing";
+import FinancialProjections from "./pages/dashboard/FinancialProjections";
+import ValuationCalculator from "./pages/dashboard/ValuationCalculator";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";

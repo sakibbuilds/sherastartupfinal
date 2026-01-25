@@ -72,7 +72,6 @@ const tools: Tool[] = [
     icon: Lightbulb,
     path: '/dashboard/tools/idea-validator',
     isAIPowered: true,
-    comingSoon: true,
     gradient: 'from-yellow-500 to-orange-500'
   },
   {
@@ -82,7 +81,6 @@ const tools: Tool[] = [
     icon: Target,
     path: '/dashboard/tools/market-sizing',
     isAIPowered: true,
-    comingSoon: true,
     gradient: 'from-red-500 to-rose-500'
   },
   {
@@ -92,7 +90,6 @@ const tools: Tool[] = [
     icon: BarChart3,
     path: '/dashboard/tools/financial-projections',
     isAIPowered: true,
-    comingSoon: true,
     gradient: 'from-indigo-500 to-violet-500'
   },
   {
@@ -102,7 +99,6 @@ const tools: Tool[] = [
     icon: Calculator,
     path: '/dashboard/tools/valuation-calculator',
     isAIPowered: true,
-    comingSoon: true,
     gradient: 'from-teal-500 to-cyan-500'
   }
 ];
@@ -133,10 +129,7 @@ const Tools = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
-            <Card className={cn(
-              "glass-card h-full transition-all duration-300",
-              !tool.comingSoon && "hover:-translate-y-1 cursor-pointer hover:border-primary/30"
-            )}>
+            <Card className="glass-card h-full transition-all duration-300 hover:-translate-y-1 cursor-pointer hover:border-primary/30">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className={cn(
@@ -152,9 +145,6 @@ const Tools = () => {
                         AI
                       </Badge>
                     )}
-                    {tool.comingSoon && (
-                      <Badge variant="outline">Coming Soon</Badge>
-                    )}
                   </div>
                 </div>
                 <CardTitle className="text-lg mt-4">{tool.name}</CardTitle>
@@ -165,18 +155,10 @@ const Tools = () => {
               <CardContent>
                 <Button 
                   className="w-full gap-2"
-                  variant={tool.comingSoon ? "outline" : "default"}
-                  disabled={tool.comingSoon}
-                  onClick={() => !tool.comingSoon && navigate(tool.path)}
+                  onClick={() => navigate(tool.path)}
                 >
-                  {tool.comingSoon ? (
-                    'Coming Soon'
-                  ) : (
-                    <>
-                      Launch Tool
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
+                  Launch Tool
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </CardContent>
             </Card>
