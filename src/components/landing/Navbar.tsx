@@ -3,11 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/common/NotificationBell";
-import { Rocket, Menu, X, LayoutDashboard, LogOut, ChevronDown, Users, Building2, GraduationCap } from "lucide-react";
+import { Rocket, Menu, X, LayoutDashboard, LogOut, ChevronDown, Users, Building2, GraduationCap, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { gsap } from "gsap";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -40,7 +41,7 @@ export function Navbar() {
           opacity: 0,
           y: -10,
           duration: 0.5,
-          stagger: 0.1,
+          stagger: 0.08,
           ease: "power3.out",
           delay: 0.2,
         });
@@ -60,11 +61,13 @@ export function Navbar() {
     }
   };
 
-  const services = [
-    { icon: Rocket, label: "Startups", desc: "Launch & grow your venture" },
-    { icon: Users, label: "Mentorship", desc: "Connect with experts" },
-    { icon: Building2, label: "Investors", desc: "Find funding partners" },
-    { icon: GraduationCap, label: "Universities", desc: "Campus innovation hubs" },
+  const navLinks = [
+    { label: "Home", href: "/" },
+    { label: "About", href: "#" },
+    { label: "Features", href: "#" },
+    { label: "Pricing", href: "#" },
+    { label: "Testimonials", href: "#" },
+    { label: "Help", href: "#" },
   ];
 
   return (
@@ -72,7 +75,7 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
         isScrolled
-          ? "bg-card/95 backdrop-blur-xl border-b border-border shadow-soft py-3"
+          ? "bg-white/95 backdrop-blur-xl border-b border-border/50 shadow-sm py-3"
           : "bg-transparent py-5"
       )}
     >
@@ -80,7 +83,7 @@ export function Navbar() {
         <nav className="flex items-center justify-between">
           {/* Logo */}
           <Link ref={logoRef} to="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-dark flex items-center justify-center shadow-navy transition-transform group-hover:scale-105">
+            <div className="w-10 h-10 rounded-xl bg-gradient-dark flex items-center justify-center shadow-lg transition-transform group-hover:scale-105">
               <Rocket className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-foreground">
@@ -90,56 +93,20 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <div ref={linksRef} className="hidden lg:flex items-center gap-8">
-            {/* Services Dropdown */}
-            <div className="relative group">
-              <button
-                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors font-medium"
-                onMouseEnter={() => setServicesOpen(true)}
-                onMouseLeave={() => setServicesOpen(false)}
+            {navLinks.map((link, i) => (
+              <Link 
+                key={link.label}
+                to={link.href} 
+                className={cn(
+                  "text-sm font-medium transition-colors",
+                  i === 0 
+                    ? "text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                Services
-                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
-              </button>
-              
-              <div 
-                className={`absolute top-full left-0 pt-4 transition-all duration-300 ${
-                  servicesOpen ? "opacity-100 visible" : "opacity-0 invisible"
-                }`}
-                onMouseEnter={() => setServicesOpen(true)}
-                onMouseLeave={() => setServicesOpen(false)}
-              >
-                <div className="bg-card rounded-2xl shadow-soft-lg p-4 min-w-[280px] border border-border">
-                  {services.map((item) => (
-                    <Link
-                      key={item.label}
-                      to="/dashboard"
-                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition-colors group/item"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center group-hover/item:bg-accent/20 transition-colors">
-                        <item.icon className="w-5 h-5 text-accent" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{item.label}</p>
-                        <p className="text-sm text-muted-foreground">{item.desc}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              How it works
-            </Link>
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              About us
-            </Link>
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Mentors
-            </Link>
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Startups
-            </Link>
+                {link.label}
+              </Link>
+            ))}
           </div>
 
           {/* Right Actions */}
@@ -147,7 +114,7 @@ export function Navbar() {
             {user ? (
               <div className="flex items-center gap-3">
                 <NotificationBell />
-                <Button variant="navy" asChild>
+                <Button variant="ghost" className="font-medium" asChild>
                   <Link to="/dashboard">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Dashboard
@@ -156,11 +123,13 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <Button variant="ghost" className="font-medium" asChild>
+                <Button variant="ghost" className="font-medium text-muted-foreground hover:text-foreground" asChild>
                   <Link to="/auth">Sign In</Link>
                 </Button>
-                <Button variant="navy" className="font-medium px-6" asChild>
-                  <Link to="/auth">Get Started</Link>
+                <Button className="font-medium px-6 rounded-xl bg-accent hover:bg-accent/90 text-white shadow-lg shadow-accent/25" asChild>
+                  <Link to="/auth">
+                    Free Trial
+                  </Link>
                 </Button>
               </div>
             )}
@@ -169,7 +138,7 @@ export function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden w-10 h-10 rounded-xl bg-secondary flex items-center justify-center"
+            className="lg:hidden w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center"
           >
             {isMobileMenuOpen ? (
               <X className="w-5 h-5 text-foreground" />
@@ -180,50 +149,59 @@ export function Navbar() {
         </nav>
 
         {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden mt-4 py-6 border-t border-border animate-fade-in">
-            <div className="flex flex-col gap-4">
-              <Link to="/dashboard" className="text-foreground font-medium py-2">
-                Services
-              </Link>
-              <Link to="/dashboard" className="text-foreground font-medium py-2">
-                How it works
-              </Link>
-              <Link to="/dashboard" className="text-foreground font-medium py-2">
-                About us
-              </Link>
-              <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-border">
-                {user ? (
-                  <>
-                    <Button variant="navy" className="w-full" asChild>
-                      <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                        <LayoutDashboard className="w-4 h-4 mr-2" />
-                        Dashboard
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" className="justify-start" onClick={handleLogout}>
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Log out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="ghost" className="justify-start" asChild>
-                      <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                        Sign In
-                      </Link>
-                    </Button>
-                    <Button variant="navy" className="w-full" asChild>
-                      <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                        Get Started
-                      </Link>
-                    </Button>
-                  </>
-                )}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="lg:hidden mt-4 py-6 border-t border-border overflow-hidden"
+            >
+              <div className="flex flex-col gap-4">
+                {navLinks.map((link) => (
+                  <Link 
+                    key={link.label}
+                    to={link.href} 
+                    className="text-foreground font-medium py-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-border">
+                  {user ? (
+                    <>
+                      <Button className="w-full bg-accent hover:bg-accent/90" asChild>
+                        <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                          <LayoutDashboard className="w-4 h-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={handleLogout}>
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Log out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                          Sign In
+                        </Link>
+                      </Button>
+                      <Button className="w-full bg-accent hover:bg-accent/90" asChild>
+                        <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                          Free Trial
+                        </Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   );

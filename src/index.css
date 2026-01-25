@@ -344,8 +344,17 @@
   }
 
   .bg-dot-pattern {
-    background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
-    background-size: 20px 20px;
+    background-image: radial-gradient(hsl(var(--muted-foreground) / 0.15) 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+  }
+
+  /* Soft large shadow for cards */
+  .shadow-soft-lg {
+    box-shadow: 0 20px 50px -12px rgb(0 0 0 / 0.12);
+  }
+
+  .shadow-2xl-soft {
+    box-shadow: 0 25px 80px -20px rgb(0 0 0 / 0.15);
   }
 
   /* Phone mockup */

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Rocket, Mail, Twitter, Linkedin, Instagram, Youtube, ArrowRight, ArrowUp } from "lucide-react";
+import { Rocket, Mail, Twitter, Linkedin, Instagram, Youtube, ArrowRight, ArrowUp, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { gsap } from "gsap";
@@ -15,8 +15,8 @@ export function Footer() {
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        contentRef.current?.querySelectorAll(":scope > *") || [],
-        { opacity: 0, y: 20 },
+        ".footer-column",
+        { opacity: 0, y: 30 },
         {
           opacity: 1,
           y: 0,
@@ -40,23 +40,27 @@ export function Footer() {
   };
 
   const footerLinks = {
-    "Products": [
+    "Product": [
       { label: "Features", href: "#" },
       { label: "Pricing", href: "#" },
       { label: "Integrations", href: "#" },
       { label: "Changelog", href: "#" },
     ],
     "Company": [
-      { label: "About us", href: "#" },
+      { label: "About", href: "#" },
       { label: "Careers", href: "#" },
       { label: "Press", href: "#" },
-      { label: "Contact us", href: "#" },
+      { label: "Contact", href: "#" },
     ],
     "Resources": [
       { label: "Blog", href: "#" },
       { label: "Help Center", href: "#" },
       { label: "Community", href: "#" },
       { label: "Tutorials", href: "#" },
+    ],
+    "Earn Money": [
+      { label: "Become Partner", href: "#" },
+      { label: "Refer Friends", href: "#" },
     ],
   };
 
@@ -68,54 +72,52 @@ export function Footer() {
   ];
 
   return (
-    <footer ref={footerRef} className="bg-primary text-white pt-20 pb-8">
-      <div ref={contentRef} className="container mx-auto px-6">
-        <div className="grid lg:grid-cols-5 gap-12 mb-16">
-          {/* Brand */}
-          <div className="lg:col-span-2">
+    <footer ref={footerRef} className="bg-slate-50 border-t border-border/30">
+      {/* Main Footer Content */}
+      <div ref={contentRef} className="container mx-auto px-6 py-16">
+        <div className="grid lg:grid-cols-6 gap-12">
+          {/* Brand Column */}
+          <div className="lg:col-span-2 footer-column">
             <Link to="/" className="flex items-center gap-2.5 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-dark flex items-center justify-center shadow-lg">
                 <Rocket className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold">
+              <span className="text-xl font-bold text-foreground">
                 Shera<span className="text-accent">Startup</span>
               </span>
             </Link>
 
-            <p className="text-white/70 mb-8 max-w-sm leading-relaxed">
-              Connect with investors, mentors, and co-founders. The ultimate platform for university entrepreneurs.
+            <p className="text-muted-foreground mb-6 leading-relaxed max-w-sm">
+              Connect with investors, mentors, and co-founders. The ultimate platform for university entrepreneurs to build and scale.
             </p>
 
-            {/* Newsletter */}
-            <div className="mb-8">
-              <h4 className="font-semibold mb-3">Stay Updated</h4>
-              <p className="text-white/60 text-sm mb-4">Get the latest updates, news and tips right in your inbox.</p>
-              <div className="flex gap-2">
-                <Input 
-                  type="email" 
-                  placeholder="Enter your email..." 
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl focus:border-accent"
-                />
-                <Button className="rounded-xl bg-accent hover:bg-accent/90 text-white px-6 shadow-emerald">
-                  Subscribe
-                </Button>
-              </div>
+            {/* Social Links */}
+            <div className="flex items-center gap-3">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  className="w-10 h-10 rounded-xl bg-white border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all"
+                  aria-label={social.label}
+                >
+                  <social.icon className="w-4 h-4" />
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Links */}
+          {/* Links Columns */}
           {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
-              <h4 className="font-semibold mb-6">{title}</h4>
-              <ul className="space-y-4">
+            <div key={title} className="footer-column">
+              <h4 className="font-semibold text-foreground mb-4">{title}</h4>
+              <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link.label}>
                     <a 
                       href={link.href} 
-                      className="text-white/60 hover:text-white transition-colors flex items-center gap-1 group"
+                      className="text-muted-foreground hover:text-foreground transition-colors text-sm"
                     >
                       {link.label}
-                      <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                     </a>
                   </li>
                 ))}
@@ -123,46 +125,60 @@ export function Footer() {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Bottom */}
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Social Links */}
-          <div className="flex items-center gap-4">
-            {socialLinks.map((social) => (
-              <a
-                key={social.label}
-                href={social.href}
-                className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-                aria-label={social.label}
-              >
-                <social.icon className="w-5 h-5" />
-              </a>
-            ))}
+      {/* Newsletter Section */}
+      <div className="border-t border-border/30">
+        <div className="container mx-auto px-6 py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h4 className="font-semibold text-foreground mb-1">Subscribe to our newsletter</h4>
+              <p className="text-sm text-muted-foreground">Get the latest updates and startup tips delivered to your inbox.</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Input 
+                type="email" 
+                placeholder="Enter your email..." 
+                className="bg-white border-border/50 rounded-xl min-w-[250px]"
+              />
+              <Button className="rounded-xl bg-primary hover:bg-primary/90 text-white px-6">
+                Subscribe
+              </Button>
+            </div>
           </div>
-
-          {/* Legal */}
-          <div className="flex items-center gap-6 text-sm text-white/60">
-            <a href="#" className="hover:text-white transition-colors">Privacy policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms & condition</a>
-          </div>
-
-          {/* Scroll to top */}
-          <button
-            onClick={scrollToTop}
-            className="group flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
-          >
-            Back to top
-            <span className="p-1.5 rounded-lg bg-white/10 group-hover:bg-accent transition-colors">
-              <ArrowUp className="w-3 h-3" />
-            </span>
-          </button>
         </div>
+      </div>
 
-        {/* Copyright */}
-        <div className="text-center mt-8 pt-8 border-t border-white/5">
-          <p className="text-sm text-white/60">
-            © {new Date().getFullYear()} SheraStartup. All rights reserved.
-          </p>
+      {/* Bottom Bar */}
+      <div className="border-t border-border/30">
+        <div className="container mx-auto px-6 py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Copyright */}
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              © {new Date().getFullYear()} SheraStartup. Made with 
+              <Heart className="w-3 h-3 text-red-500 fill-red-500" /> 
+              in Bangladesh
+            </p>
+
+            {/* Legal Links */}
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-foreground transition-colors">Cookie Policy</a>
+            </div>
+
+            {/* Back to top */}
+            <button
+              onClick={scrollToTop}
+              className="group flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Back to top
+              <span className="w-8 h-8 rounded-lg bg-white border border-border/50 flex items-center justify-center group-hover:bg-accent group-hover:text-white group-hover:border-accent transition-all">
+                <ArrowUp className="w-3 h-3" />
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </footer>
