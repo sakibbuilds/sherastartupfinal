@@ -9,7 +9,7 @@ export const StudyAbroadAdBanner = forwardRef<HTMLDivElement>((_, ref) => {
     title: 'Study Abroad with Confidence',
     subtitle: 'IELTS Preparation',
     description: 'Get Band 7+ with our expert coaching. 95% success rate. Join 10,000+ successful students.',
-    imageUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=300&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=400&h=300&fit=crop',
     ctaText: 'Start Free Trial',
     ctaUrl: '#',
     features: ['Expert Tutors', 'Mock Tests', 'Visa Support'],
