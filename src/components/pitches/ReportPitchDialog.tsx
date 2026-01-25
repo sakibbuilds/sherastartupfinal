@@ -90,8 +90,8 @@ const ReportPitchDialog = ({ open, onOpenChange, videoId, videoTitle }: ReportPi
       .from('pitch_reports')
       .insert({
         video_id: videoId,
-        reporter_id: user.id,
-        category,
+        user_id: user.id,
+        reason: category,
         description: description.trim() || null
       });
 

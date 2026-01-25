@@ -496,6 +496,7 @@ const UserProfilePage = () => {
            return {
             ...post,
             comments_count: commentsCount,
+            likes_count: 0,
             profiles: {
               full_name: profileData.full_name,
               avatar_url: profileData.avatar_url,
