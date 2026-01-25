@@ -362,6 +362,22 @@ const Pitches = () => {
         setPitches(prev => prev.map(p => 
           p.id === pitch.id ? { ...p, isLiked: wasLiked } : p
         ));
+      } else if (pitch.user_id !== user.id) {
+        // Send notification to pitch owner
+        try {
+          await supabase.functions.invoke('create-notification', {
+            body: {
+              user_id: pitch.user_id,
+              type: 'like',
+              title: 'New like on your pitch',
+              message: `Someone liked your pitch "${pitch.title}"`,
+              reference_id: pitch.id,
+              reference_type: 'video_pitch'
+            }
+          });
+        } catch (err) {
+          console.error('Error sending notification:', err);
+        }
       }
     }
   };
@@ -405,17 +421,38 @@ const Pitches = () => {
   const handleAddComment = async () => {
     if (!user || !newComment.trim() || !filteredPitches[currentIndex]) return;
 
+    const currentPitch = filteredPitches[currentIndex];
+    const commentContent = newComment.trim();
+
     const { error } = await supabase
       .from('video_pitch_comments')
       .insert({
-        pitch_id: filteredPitches[currentIndex].id,
+        pitch_id: currentPitch.id,
         user_id: user.id,
-        content: newComment.trim()
+        content: commentContent
       });
 
     if (!error) {
       setNewComment('');
-      fetchComments(filteredPitches[currentIndex].id);
+      fetchComments(currentPitch.id);
+      
+      // Send notification to pitch owner (if not commenting on own pitch)
+      if (currentPitch.user_id !== user.id) {
+        try {
+          await supabase.functions.invoke('create-notification', {
+            body: {
+              user_id: currentPitch.user_id,
+              type: 'comment',
+              title: 'New comment on your pitch',
+              message: `Someone commented: "${commentContent.substring(0, 50)}${commentContent.length > 50 ? '...' : ''}"`,
+              reference_id: currentPitch.id,
+              reference_type: 'video_pitch'
+            }
+          });
+        } catch (err) {
+          console.error('Error sending notification:', err);
+        }
+      }
     }
   };
 

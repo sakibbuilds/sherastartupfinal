@@ -1,1 +1,10 @@
 project_id = "tqrfivjscjaacafdmosk"
+
+[functions.create-notification]
+verify_jwt = false
+
+[functions.track-view]
+verify_jwt = false
+
+[realtime]
+enabled = true

@@ -651,6 +651,24 @@ const Messages = () => {
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', selectedConversation.id);
+
+      // Send notification to the other user
+      if (otherUser && otherUser.user_id !== user.id) {
+        try {
+          await supabase.functions.invoke('create-notification', {
+            body: {
+              user_id: otherUser.user_id,
+              type: 'message',
+              title: 'New message',
+              message: `You have a new message: "${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}"`,
+              reference_id: selectedConversation.id,
+              reference_type: 'message'
+            }
+          });
+        } catch (err) {
+          console.error('Error sending message notification:', err);
+        }
+      }
     } else {
        console.log("Message sent but returned no data (likely RLS), keeping optimistic copy.");
     }
