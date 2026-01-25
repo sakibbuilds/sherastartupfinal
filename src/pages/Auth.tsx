@@ -320,7 +320,7 @@ const Auth = () => {
 
             <Button 
               variant="outline" 
-              className="w-full bg-transparent" 
+              className="w-full" 
               onClick={handleGoogleSignIn}
               disabled={isLoading}
             >
