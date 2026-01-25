@@ -29,6 +29,12 @@ import AdminMentorships from "./pages/dashboard/AdminMentorships";
 import AdminAdvertisements from "./pages/dashboard/AdminAdvertisements";
 import Search from "./pages/dashboard/Search";
 import Settings from "./pages/dashboard/Settings";
+import Mentors from "./pages/dashboard/Mentors";
+import Tools from "./pages/dashboard/Tools";
+import ElevatorPitch from "./pages/dashboard/ElevatorPitch";
+import PitchDeck from "./pages/dashboard/PitchDeck";
+import BizSimulation from "./pages/dashboard/BizSimulation";
+import InvestmentSimulation from "./pages/dashboard/InvestmentSimulation";
 
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -76,10 +82,16 @@ const App = () => (
                 <Route path="network/connections" element={<Match />} />
                 <Route path="network/requests" element={<Match />} />
                 <Route path="messages" element={<Messages />} />
+                <Route path="mentors" element={<Mentors />} />
                 <Route path="mentorship" element={<Bookings />} />
-                <Route path="mentorship/find" element={<Bookings />} />
+                <Route path="mentorship/find" element={<Mentors />} />
                 <Route path="mentorship/become" element={<BecomeMentor />} />
                 <Route path="bookings" element={<Bookings />} />
+                <Route path="tools" element={<Tools />} />
+                <Route path="tools/elevator-pitch" element={<ElevatorPitch />} />
+                <Route path="tools/pitch-deck" element={<PitchDeck />} />
+                <Route path="tools/biz-simulation" element={<BizSimulation />} />
+                <Route path="tools/investment-simulation" element={<InvestmentSimulation />} />
                 <Route path="startups" element={<Startups />} />
                 <Route path="startups/:startupId" element={<StartupDetails />} />
                 <Route path="founders" element={<Founders />} />

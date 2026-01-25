@@ -50,7 +50,11 @@ import {
   BadgeCheck,
   Network,
   Search,
-  UserPlus
+  UserPlus,
+  GraduationCap,
+  Wrench,
+  Mic,
+  Presentation
 } from 'lucide-react';
 import { UserBadges } from '@/components/common/UserBadges';
 import { cn } from '@/lib/utils';
@@ -133,13 +137,29 @@ const navSections: NavSection[] = [
         ]
       },
       { 
-        icon: Calendar, 
-        label: 'Mentorship', 
-        path: '/dashboard/mentorship',
+        icon: GraduationCap, 
+        label: 'Mentors', 
+        path: '/dashboard/mentors',
         submenu: [
-          { icon: Users, label: 'My Mentors', path: '/dashboard/mentorship' },
-          { icon: Users, label: 'Find a Mentor', path: '/dashboard/mentorship/find' },
+          { icon: Users, label: 'Browse Mentors', path: '/dashboard/mentors' },
+          { icon: Calendar, label: 'My Sessions', path: '/dashboard/mentorship' },
           { icon: Check, label: 'Become a Mentor', path: '/dashboard/mentorship/become' },
+        ]
+      },
+    ]
+  },
+  {
+    title: "Resources",
+    items: [
+      { 
+        icon: Wrench, 
+        label: 'Tools', 
+        path: '/dashboard/tools',
+        submenu: [
+          { icon: Mic, label: 'Elevator Pitch', path: '/dashboard/tools/elevator-pitch' },
+          { icon: Presentation, label: 'Pitch Deck', path: '/dashboard/tools/pitch-deck' },
+          { icon: Building2, label: 'Biz Simulation', path: '/dashboard/tools/biz-simulation' },
+          { icon: TrendingUp, label: 'Investment Sim', path: '/dashboard/tools/investment-simulation' },
         ]
       },
     ]
