@@ -497,6 +497,7 @@ export type Database = {
           image_url: string | null
           media_type: string | null
           media_url: string | null
+          media_urls: string[] | null
           updated_at: string
           user_id: string
         }
@@ -508,6 +509,7 @@ export type Database = {
           image_url?: string | null
           media_type?: string | null
           media_url?: string | null
+          media_urls?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -519,6 +521,7 @@ export type Database = {
           image_url?: string | null
           media_type?: string | null
           media_url?: string | null
+          media_urls?: string[] | null
           updated_at?: string
           user_id?: string
         }
