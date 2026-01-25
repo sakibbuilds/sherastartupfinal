@@ -27,7 +27,6 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    // Animate navbar elements on mount
     const ctx = gsap.context(() => {
       gsap.from(logoRef.current, {
         opacity: 0,
@@ -73,19 +72,19 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
         isScrolled
-          ? "bg-white/90 backdrop-blur-xl border-b border-border/50 shadow-soft py-3"
+          ? "bg-card/95 backdrop-blur-xl border-b border-border shadow-soft py-3"
           : "bg-transparent py-5"
       )}
     >
       <div className="container px-4 md:px-6">
         <nav className="flex items-center justify-between">
           {/* Logo */}
-          <Link ref={logoRef} to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-purple transition-transform group-hover:scale-105">
+          <Link ref={logoRef} to="/" className="flex items-center gap-2.5 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-dark flex items-center justify-center shadow-navy transition-transform group-hover:scale-105">
               <Rocket className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-foreground">
-              Shera<span className="text-primary">Startup</span>
+              Shera<span className="text-accent">Startup</span>
             </span>
           </Link>
 
@@ -109,15 +108,15 @@ export function Navbar() {
                 onMouseEnter={() => setServicesOpen(true)}
                 onMouseLeave={() => setServicesOpen(false)}
               >
-                <div className="bg-white rounded-2xl shadow-soft-lg p-4 min-w-[280px] border border-border/50">
+                <div className="bg-card rounded-2xl shadow-soft-lg p-4 min-w-[280px] border border-border">
                   {services.map((item) => (
                     <Link
                       key={item.label}
                       to="/dashboard"
                       className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition-colors group/item"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover/item:bg-primary/20 transition-colors">
-                        <item.icon className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center group-hover/item:bg-accent/20 transition-colors">
+                        <item.icon className="w-5 h-5 text-accent" />
                       </div>
                       <div>
                         <p className="font-medium text-foreground">{item.label}</p>
@@ -136,10 +135,10 @@ export function Navbar() {
               About us
             </Link>
             <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Agents
+              Mentors
             </Link>
             <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Projects
+              Startups
             </Link>
           </div>
 
@@ -148,7 +147,7 @@ export function Navbar() {
             {user ? (
               <div className="flex items-center gap-3">
                 <NotificationBell />
-                <Button className="rounded-full bg-gradient-primary shadow-purple hover:shadow-purple hover:-translate-y-0.5 transition-all" asChild>
+                <Button variant="navy" asChild>
                   <Link to="/dashboard">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Dashboard
@@ -157,10 +156,10 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <Button variant="ghost" className="rounded-full font-medium" asChild>
+                <Button variant="ghost" className="font-medium" asChild>
                   <Link to="/auth">Sign In</Link>
                 </Button>
-                <Button className="rounded-full bg-gradient-primary shadow-purple hover:shadow-purple hover:-translate-y-0.5 transition-all font-medium px-6" asChild>
+                <Button variant="navy" className="font-medium px-6" asChild>
                   <Link to="/auth">Get Started</Link>
                 </Button>
               </div>
@@ -173,9 +172,9 @@ export function Navbar() {
             className="lg:hidden w-10 h-10 rounded-xl bg-secondary flex items-center justify-center"
           >
             {isMobileMenuOpen ? (
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-foreground" />
             ) : (
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5 text-foreground" />
             )}
           </button>
         </nav>
@@ -196,7 +195,7 @@ export function Navbar() {
               <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-border">
                 {user ? (
                   <>
-                    <Button className="w-full rounded-full bg-gradient-primary shadow-purple" asChild>
+                    <Button variant="navy" className="w-full" asChild>
                       <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                         <LayoutDashboard className="w-4 h-4 mr-2" />
                         Dashboard
@@ -214,7 +213,7 @@ export function Navbar() {
                         Sign In
                       </Link>
                     </Button>
-                    <Button className="w-full rounded-full bg-gradient-primary shadow-purple" asChild>
+                    <Button variant="navy" className="w-full" asChild>
                       <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
                         Get Started
                       </Link>
