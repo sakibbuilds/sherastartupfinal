@@ -133,7 +133,7 @@ const Onboarding = () => {
     }
 
     if (data?.onboarding_completed) {
-      navigate('/dashboard');
+      navigate('/dashboard/feed', { replace: true });
     } else if (data?.full_name) {
       setFullName(data.full_name);
     }
@@ -154,13 +154,13 @@ const Onboarding = () => {
       .insert({
         name: customUniversity.trim(),
         type: 'private',
-        location: 'Bangladesh',
-        is_custom: true
+        location: 'Bangladesh'
       })
       .select()
       .single();
 
     if (error) {
+      console.error('University insert error:', error);
       toast({ title: 'Error', description: 'Failed to add university', variant: 'destructive' });
     } else if (data) {
       setUniversities([...universities, data]);
@@ -183,6 +183,7 @@ const Onboarding = () => {
       title: title || null,
       linkedin_url: linkedinUrl || null,
       expertise: expertise.length > 0 ? expertise : null,
+      university: selectedUniversity?.name || null,
       university_id: selectedUniversity?.id || null,
       onboarding_completed: true
     };
@@ -193,7 +194,28 @@ const Onboarding = () => {
       updateData.investment_range_max = investmentRangeMax ? parseFloat(investmentRangeMax) : null;
     }
 
-    // Also add user role - use 'user' as default since 'mentor' and 'mentee' aren't valid enum values
+    // First check if profile exists, if not create it
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let profileError;
+    if (existingProfile) {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('user_id', user.id);
+      profileError = error;
+    } else {
+      const { error } = await supabase
+        .from('profiles')
+        .insert({ ...updateData, user_id: user.id });
+      profileError = error;
+    }
+
+    // Also add user role - use 'user' as default
     await supabase
       .from('user_roles')
       .upsert({
@@ -201,16 +223,12 @@ const Onboarding = () => {
         role: 'user' as const
       });
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('user_id', user.id);
-
-    if (error) {
+    if (profileError) {
+      console.error('Profile update error:', profileError);
       toast({ title: 'Error', description: 'Failed to complete onboarding', variant: 'destructive' });
     } else {
-      toast({ title: 'Welcome to CampusLaunch!', description: 'Your profile is set up.' });
-      navigate('/dashboard');
+      toast({ title: 'Welcome to SheraStartup!', description: 'Your profile is set up.' });
+      navigate('/dashboard/feed', { replace: true });
     }
 
     setLoading(false);
@@ -348,15 +366,17 @@ const Onboarding = () => {
                       <Button
                         variant="outline"
                         role="combobox"
-                        className="w-full justify-between h-12"
+                        className="w-full justify-between h-12 text-foreground bg-background border-input hover:bg-muted"
                       >
-                        {selectedUniversity ? selectedUniversity.name : "Select university..."}
+                        <span className="text-foreground">
+                          {selectedUniversity ? selectedUniversity.name : "Select university..."}
+                        </span>
                         <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search universities..." />
+                    <PopoverContent className="w-[400px] p-0 bg-card border border-border shadow-xl z-[100]" align="start">
+                      <Command className="bg-card">
+                        <CommandInput placeholder="Search universities..." className="text-foreground" />
                         <CommandList>
                           <CommandEmpty>
                             <p className="py-2">No university found.</p>
