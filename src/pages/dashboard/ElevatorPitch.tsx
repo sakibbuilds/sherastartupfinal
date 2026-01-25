@@ -8,11 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   ArrowLeft, 
   ArrowRight, 
   Copy, 
-  Download, 
   Mic, 
   RefreshCw, 
   Sparkles,
@@ -21,7 +21,8 @@ import {
   Lightbulb,
   Users,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Wand2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -59,6 +60,7 @@ const ElevatorPitch = () => {
   });
   const [generatedPitch, setGeneratedPitch] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
 
   const handleInputChange = (field: keyof PitchData, value: string) => {
     setPitchData(prev => ({ ...prev, [field]: value }));
@@ -78,29 +80,71 @@ const ElevatorPitch = () => {
     }
   };
 
-  const generatePitch = () => {
+  const generatePitch = async () => {
     setIsGenerating(true);
     
-    // Simulate AI generation (in production, this would call an AI API)
-    setTimeout(() => {
-      const pitch = `Hi, I'm from ${pitchData.companyName || '[Your Company]'}.
+    try {
+      const { data, error } = await supabase.functions.invoke('startup-tools-ai', {
+        body: {
+          toolType: 'elevator-pitch',
+          data: pitchData
+        }
+      });
 
-${pitchData.problemStatement ? `We've discovered that ${pitchData.problemStatement.toLowerCase()}` : 'We solve a critical problem in the market.'}
+      if (error) throw error;
 
-${pitchData.solution ? `That's why we built a solution that ${pitchData.solution.toLowerCase()}` : 'Our solution addresses this directly.'}
-
-${pitchData.targetMarket ? `We're targeting ${pitchData.targetMarket}` : 'We serve a growing market'}, ${pitchData.uniqueValue ? `and what makes us unique is ${pitchData.uniqueValue.toLowerCase()}` : 'with a differentiated approach.'}
-
-${pitchData.traction ? `So far, we've achieved ${pitchData.traction.toLowerCase()}` : 'We have early traction'}.
-
-${pitchData.ask ? `We're looking for ${pitchData.ask.toLowerCase()}` : 'We\'re looking for partners and investors'} to help us scale and reach more customers.
-
-Would you like to learn more?`;
-
-      setGeneratedPitch(pitch);
+      if (data?.result) {
+        setGeneratedPitch(data.result);
+        setCurrentStep(steps.length);
+        toast({
+          title: 'Pitch Generated!',
+          description: 'Your AI-powered elevator pitch is ready.'
+        });
+      }
+    } catch (error) {
+      console.error('Error generating pitch:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate pitch. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
       setIsGenerating(false);
-      setCurrentStep(steps.length); // Move to result view
-    }, 1500);
+    }
+  };
+
+  const improvePitch = async () => {
+    if (!generatedPitch.trim()) return;
+    
+    setIsImproving(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('startup-tools-ai', {
+        body: {
+          toolType: 'improve-pitch',
+          data: { currentPitch: generatedPitch }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.result) {
+        setGeneratedPitch(data.result);
+        toast({
+          title: 'Pitch Improved!',
+          description: 'Your pitch has been enhanced by AI.'
+        });
+      }
+    } catch (error) {
+      console.error('Error improving pitch:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to improve pitch. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsImproving(false);
+    }
   };
 
   const copyToClipboard = async () => {
@@ -230,10 +274,14 @@ Would you like to learn more?`;
           <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
             <Mic className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">Elevator Pitch Builder</h1>
+          <h1 className="text-2xl font-bold">AI Elevator Pitch Builder</h1>
+          <Badge variant="secondary" className="gap-1">
+            <Sparkles className="h-3 w-3" />
+            AI Powered
+          </Badge>
         </div>
         <p className="text-muted-foreground">
-          Craft a compelling 60-second pitch in 6 simple steps
+          Craft a compelling 60-second pitch in 6 simple steps with AI assistance
         </p>
       </div>
 
@@ -308,12 +356,19 @@ Would you like to learn more?`;
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
-                  <Button onClick={nextStep}>
+                  <Button onClick={nextStep} disabled={isGenerating}>
                     {currentStep === steps.length - 1 ? (
-                      <>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Generate Pitch
-                      </>
+                      isGenerating ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Generate with AI
+                        </>
+                      )
                     ) : (
                       <>
                         Next
@@ -335,7 +390,7 @@ Would you like to learn more?`;
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
-                    Your Elevator Pitch
+                    Your AI-Generated Elevator Pitch
                   </CardTitle>
                   <Badge variant="secondary" className="gap-1">
                     <Clock className="h-3 w-3" />
@@ -343,13 +398,14 @@ Would you like to learn more?`;
                   </Badge>
                 </div>
                 <CardDescription>
-                  Here's your generated pitch. Feel free to customize it!
+                  Here's your AI-generated pitch. You can edit it or use AI to improve it further!
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {isGenerating ? (
-                  <div className="flex items-center justify-center py-12">
-                    <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+                    <p className="text-muted-foreground">AI is crafting your perfect pitch...</p>
                   </div>
                 ) : (
                   <>
@@ -363,6 +419,23 @@ Would you like to learn more?`;
                       <Button onClick={copyToClipboard}>
                         <Copy className="h-4 w-4 mr-2" />
                         Copy
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        onClick={improvePitch}
+                        disabled={isImproving}
+                      >
+                        {isImproving ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Improving...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="h-4 w-4 mr-2" />
+                            Improve with AI
+                          </>
+                        )}
                       </Button>
                       <Button variant="outline" onClick={resetBuilder}>
                         <RefreshCw className="h-4 w-4 mr-2" />

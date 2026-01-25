@@ -6,5 +6,8 @@ verify_jwt = false
 [functions.track-view]
 verify_jwt = false
 
+[functions.startup-tools-ai]
+verify_jwt = false
+
 [realtime]
 enabled = true
