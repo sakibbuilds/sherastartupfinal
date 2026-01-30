@@ -1193,8 +1193,8 @@ const Messages = () => {
               )}
             </AnimatePresence>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+          {/* Messages - Scrollable body */}
+            <div className="flex-1 overflow-y-auto p-4 min-h-0">
               <div className="space-y-1 pb-4">
                 {filteredMessages.map((message, index) => {
                   const isOwn = message.sender_id === user?.id;
@@ -1472,7 +1472,7 @@ const Messages = () => {
                 
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Edit message modal */}
             <AnimatePresence>
@@ -1592,8 +1592,8 @@ const Messages = () => {
               )}
             </AnimatePresence>
 
-            {/* Message Input */}
-            <div className="p-4 border-t border-white/10 bg-background/50 backdrop-blur-sm pb-24 lg:pb-4">
+            {/* Message Input - Fixed at bottom */}
+            <div className="p-4 border-t border-white/10 bg-background/95 backdrop-blur-md shrink-0 sticky bottom-0 z-20 pb-20 lg:pb-4">
               <div className="flex gap-2 items-end">
                 <Popover>
                   <PopoverTrigger asChild>

@@ -651,17 +651,17 @@ const UserProfilePage = () => {
           {/* Main Profile Header - Spans 8 cols */}
           <Card className="lg:col-span-8 glass-card overflow-hidden border-0 relative flex flex-col">
             {/* Cover Image */}
-            <div className="h-48 bg-gradient-to-r from-primary/20 via-purple-500/10 to-blue-500/20 relative">
+            <div className="h-28 sm:h-48 bg-gradient-to-r from-primary/20 via-purple-500/10 to-blue-500/20 relative">
               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&h=400&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay" />
             </div>
             
-            <CardContent className="px-8 pb-8 pt-0 relative flex-1">
+            <CardContent className="px-4 sm:px-8 pb-6 sm:pb-8 pt-0 relative flex-1">
               {/* Avatar - Overlapping */}
-              <div className="-mt-16 mb-4 flex justify-between items-end">
+              <div className="-mt-12 sm:-mt-16 mb-3 sm:mb-4 flex justify-between items-end">
                 <AvatarWithPresence userId={profile.user_id} indicatorSize="lg">
-                  <Avatar className="h-32 w-32 border-4 border-black shadow-xl">
+                  <Avatar className="h-20 w-20 sm:h-32 sm:w-32 border-4 border-black shadow-xl">
                     <AvatarImage src={profile.avatar_url || ''} />
-                    <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
+                    <AvatarFallback className="text-xl sm:text-3xl bg-primary text-primary-foreground">
                       {profile.full_name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -722,15 +722,15 @@ const UserProfilePage = () => {
 
               {/* Profile Info */}
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold">{profile.full_name}</h1>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{profile.full_name}</h1>
                   {isVerified(profile) && (
                     <VerifiedBadge size="md" />
                   )}
                 </div>
                 
                 {profile.title && (
-                  <p className="text-lg text-muted-foreground mb-2">
+                  <p className="text-sm sm:text-lg text-muted-foreground mb-2">
                     {profile.title}
                     {startup && (
                       <span className="text-primary cursor-pointer hover:underline ml-1" onClick={() => navigate(`/dashboard/startups/${startup.id}`)}>
@@ -741,18 +741,52 @@ const UserProfilePage = () => {
                 )}
                 
                 {/* Mobile Action Buttons */}
-                <div className="flex sm:hidden gap-3 mt-4">
-                  {/* Same buttons as desktop but visible on mobile */}
-                   {isOwnProfile ? (
+                <div className="flex sm:hidden gap-2 mt-4 flex-wrap">
+                  {isOwnProfile ? (
                     <Button onClick={() => navigate('/dashboard/profile')} size="sm" className="flex-1 rounded-full">
                       <Edit className="h-4 w-4 mr-2" />
-                      Edit
+                      Edit Profile
                     </Button>
                   ) : (
-                    <Button onClick={handleMessage} size="sm" className="flex-1 rounded-full">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Message
-                    </Button>
+                    <>
+                      <Button onClick={handleMessage} size="sm" className="flex-1 min-w-[100px] rounded-full">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Message
+                      </Button>
+                      {isConnected ? (
+                        <Button variant="secondary" disabled size="sm" className="flex-1 min-w-[100px] rounded-full">
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Connected
+                        </Button>
+                      ) : isRequestSent ? (
+                        <Button variant="secondary" disabled size="sm" className="flex-1 min-w-[100px] rounded-full">
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Sent
+                        </Button>
+                      ) : hasIncomingRequest ? (
+                        <Button 
+                          variant="outline" 
+                          onClick={handleAcceptConnection}
+                          disabled={connectionLoading}
+                          size="sm"
+                          className="flex-1 min-w-[100px] rounded-full"
+                        >
+                          {connectionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
+                          Accept
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline"
+                          onClick={handleConnect}
+                          disabled={connectionLoading}
+                          size="sm"
+                          className="flex-1 min-w-[100px] rounded-full"
+                        >
+                          {connectionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                          Follow
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
