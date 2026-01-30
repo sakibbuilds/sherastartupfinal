@@ -54,7 +54,8 @@ import {
   GraduationCap,
   Wrench,
   Mic,
-  Presentation
+  Presentation,
+  FileText
 } from 'lucide-react';
 import { UserBadges } from '@/components/common/UserBadges';
 import { GlobalSearch } from '@/components/common/GlobalSearch';
@@ -844,6 +845,18 @@ const DashboardLayout = () => {
                     <div className="px-2 py-1.5 text-sm font-semibold text-foreground/70 border-b border-border mb-1 mt-2">
                       Management
                     </div>
+                    <Button
+                      variant={location.pathname === '/dashboard/admin/posts' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start gap-3"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/dashboard/admin/posts');
+                      }}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Posts
+                    </Button>
                     <Button
                       variant={location.pathname === '/dashboard/admin/advertisements' ? 'default' : 'ghost'}
                       size="sm"
