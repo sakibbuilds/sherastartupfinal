@@ -1432,21 +1432,22 @@ const Messages = () => {
                           )}
                         </div>
                         
-                        {/* Timestamp & Status */}
-                        <div className={cn(
-                          'flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity px-1',
-                          isOwn ? 'justify-end' : 'justify-start',
-                          isLastInSequence && 'mb-1'
-                        )}>
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(message.created_at), 'h:mm a')}
-                          </span>
-                          {isOwn && (
-                            message.is_read 
-                              ? <CheckCheck className="h-3 w-3 text-primary" />
-                              : <div className="h-3 w-3 rounded-full border border-muted-foreground" />
-                          )}
-                        </div>
+                        {/* Timestamp & Status - Always visible */}
+                        {isLastInSequence && (
+                          <div className={cn(
+                            'flex items-center gap-1 mt-1 px-1',
+                            isOwn ? 'justify-end' : 'justify-start'
+                          )}>
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(message.created_at), 'h:mm a')}
+                            </span>
+                            {isOwn && (
+                              message.is_read 
+                                ? <CheckCheck className="h-3 w-3 text-primary" />
+                                : <Check className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   );
