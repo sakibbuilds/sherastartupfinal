@@ -1013,15 +1013,25 @@ const Messages = () => {
                 conv.lastMessage.sender_id !== user?.id;
               const isSelected = selectedConversation?.id === conv.id;
 
-              return (
-                <button
-                  key={conv.id}
-                  className={cn(
-                    'w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors text-left',
-                    hasUnread && 'bg-primary/5',
-                    isSelected && 'bg-white/10'
-                  )}
-                  onClick={() => setSelectedConversation(conv)}
+                return (
+                  <button
+                    key={conv.id}
+                    className={cn(
+                      'w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors text-left',
+                      hasUnread && 'bg-primary/5',
+                      isSelected && 'bg-white/10'
+                    )}
+                    onClick={() => {
+                      // Set otherUser immediately from conversation data to prevent "User" flash
+                      if (other && other.profiles) {
+                        setOtherUser({
+                          full_name: other.profiles.full_name || 'Unknown',
+                          avatar_url: other.profiles.avatar_url,
+                          user_id: other.user_id
+                        });
+                      }
+                      setSelectedConversation(conv);
+                    }}
                 >
                   <AvatarWithPresence userId={other?.user_id || ''} indicatorSize="sm">
                     <Avatar>
