@@ -1,28 +1,98 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, GraduationCap, Globe, Award } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface Advertisement {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  media_url: string;
+  media_type: string;
+  link_url: string | null;
+}
 
 export const StudyAbroadAdBanner = forwardRef<HTMLDivElement>((_, ref) => {
-  // Demo ad data for IELTS/Study Abroad
-  const demoAd = {
-    title: 'Study Abroad with Confidence',
-    subtitle: 'IELTS Preparation',
-    description: 'Get Band 7+ with our expert coaching. 95% success rate. Join 10,000+ successful students.',
-    imageUrl: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=400&h=300&fit=crop',
-    ctaText: 'Start Free Trial',
-    ctaUrl: '#',
-    features: ['Expert Tutors', 'Mock Tests', 'Visa Support'],
+  const [ad, setAd] = useState<Advertisement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    fetchAd();
+  }, []);
+
+  const fetchAd = async () => {
+    // Fetch a different ad for the right sidebar (offset by 1 to get variety)
+    const { data, error } = await supabase
+      .from('advertisements')
+      .select('*')
+      .eq('is_active', true)
+      .or('placement.eq.right_sidebar,placement.eq.sidebar')
+      .order('priority', { ascending: false })
+      .range(1, 1); // Get second ad for variety
+
+    if (!error && data && data.length > 0) {
+      setAd(data[0]);
+    } else {
+      // Fallback to first ad if no second one exists
+      const { data: fallbackData } = await supabase
+        .from('advertisements')
+        .select('*')
+        .eq('is_active', true)
+        .or('placement.eq.right_sidebar,placement.eq.sidebar')
+        .order('priority', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (fallbackData) {
+        setAd(fallbackData);
+      }
+    }
+    setLoading(false);
   };
 
+  if (dismissed) return null;
+
+  if (loading) {
+    return (
+      <div ref={ref}>
+        <Skeleton className="w-full h-48 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!ad) return null;
+
   return (
-    <Card ref={ref} className="overflow-hidden glass-card border-border/50 bg-gradient-to-br from-blue-500/5 to-emerald-500/5">
+    <Card ref={ref} className="overflow-hidden glass-card border-border/50 bg-gradient-to-br from-primary/5 to-secondary/5 relative group">
+      {/* Dismiss Button */}
+      <button
+        onClick={() => setDismissed(true)}
+        className="absolute top-2 left-2 z-10 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <X className="w-3 h-3" />
+      </button>
+
       <div className="relative">
-        <img
-          src={demoAd.imageUrl}
-          alt={demoAd.title}
-          className="w-full h-28 object-cover"
-        />
+        {ad.media_type === 'video' ? (
+          <video
+            src={ad.media_url}
+            className="w-full h-28 object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        ) : (
+          <img
+            src={ad.media_url}
+            alt={ad.title}
+            className="w-full h-28 object-cover"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
         <Badge 
           variant="secondary" 
@@ -30,37 +100,29 @@ export const StudyAbroadAdBanner = forwardRef<HTMLDivElement>((_, ref) => {
         >
           Sponsored
         </Badge>
-        <div className="absolute bottom-2 left-3 right-3">
-          <div className="flex items-center gap-1.5">
-            <GraduationCap className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold text-primary">{demoAd.subtitle}</span>
+        {ad.subtitle && (
+          <div className="absolute bottom-2 left-3 right-3">
+            <span className="text-xs font-semibold text-primary">{ad.subtitle}</span>
           </div>
-        </div>
+        )}
       </div>
       <CardContent className="p-3 space-y-2.5">
-        <h4 className="font-semibold text-sm text-foreground leading-tight">{demoAd.title}</h4>
-        <p className="text-xs text-muted-foreground line-clamp-2">{demoAd.description}</p>
-        
-        <div className="flex flex-wrap gap-1.5">
-          {demoAd.features.map((feature, index) => (
-            <span 
-              key={index}
-              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary"
-            >
-              {index === 0 && <Award className="h-2.5 w-2.5" />}
-              {index === 2 && <Globe className="h-2.5 w-2.5" />}
-              {feature}
-            </span>
-          ))}
-        </div>
+        <h4 className="font-semibold text-sm text-foreground leading-tight">{ad.title}</h4>
+        {ad.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{ad.description}</p>
+        )}
 
-        <a
-          href={demoAd.ctaUrl}
-          className="inline-flex items-center justify-center gap-1.5 w-full text-xs font-medium py-2 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          {demoAd.ctaText}
-          <ExternalLink className="h-3 w-3" />
-        </a>
+        {ad.link_url && (
+          <a
+            href={ad.link_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-1.5 w-full text-xs font-medium py-2 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Learn More
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
       </CardContent>
     </Card>
   );
