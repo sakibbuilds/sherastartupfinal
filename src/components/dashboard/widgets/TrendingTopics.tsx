@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Hash } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TrendingTopicsProps {
   displayMode?: 'list' | 'carousel';
@@ -10,17 +11,14 @@ interface TrendingTopicsProps {
 
 export const TrendingTopics = forwardRef<HTMLDivElement, TrendingTopicsProps>(({ displayMode = 'list' }, ref) => {
   const [topics, setTopics] = useState<{name: string, count: number}[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchTopics();
   }, []);
 
   const fetchTopics = async () => {
-    // Ideally we would aggregate hashtags or categories.
-    // For now, let's just get distinct categories from posts
-    // Note: Supabase doesn't support complex aggregation easily via JS client without RPC or views for this specific case efficiently.
-    // So we'll just fetch recent posts and count client side for a small dataset, or use hardcoded defaults if empty.
-    
+    setLoading(true);
     const { data } = await supabase
       .from('posts')
       .select('category')
@@ -42,7 +40,6 @@ export const TrendingTopics = forwardRef<HTMLDivElement, TrendingTopicsProps>(({
         
       setTopics(sorted);
     } else {
-      // Fallback defaults
       setTopics([
         { name: 'SaaS', count: 120 },
         { name: 'AI', count: 95 },
@@ -51,7 +48,25 @@ export const TrendingTopics = forwardRef<HTMLDivElement, TrendingTopicsProps>(({
         { name: 'Product', count: 40 },
       ]);
     }
+    setLoading(false);
   };
+
+  if (loading) {
+    return (
+      <Card ref={ref} className="glass-card">
+        <CardHeader className="pb-3">
+          <Skeleton className="h-4 w-32" />
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-6 w-16 rounded-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (displayMode === 'carousel') {
     return (

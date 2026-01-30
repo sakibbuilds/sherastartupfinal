@@ -39,6 +39,8 @@ import { format, setHours, setMinutes, isBefore, startOfDay } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { UserBadges } from '@/components/common/UserBadges';
+import { Skeleton } from '@/components/ui/skeleton';
+import { UserCardSkeleton } from '@/components/skeletons';
 
 interface Mentor {
   user_id: string;
@@ -225,8 +227,23 @@ const Mentors = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="max-w-6xl mx-auto px-4 py-6 pb-20 lg:pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-lg" />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <Skeleton className="h-10 flex-1 rounded-lg" />
+          <Skeleton className="h-10 w-[200px] rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <UserCardSkeleton key={i} />
+          ))}
+        </div>
       </div>
     );
   }

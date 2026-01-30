@@ -45,6 +45,7 @@ import ReportPitchDialog from '@/components/pitches/ReportPitchDialog';
 import { StartupBadge } from '@/components/common/StartupBadge';
 import { FollowButton } from '@/components/common/FollowButton';
 import { AvatarWithPresence } from '@/components/common/OnlineIndicator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface VideoPitch {
   id: string;
@@ -495,8 +496,26 @@ const Pitches = () => {
 
   if (loading && pitches.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] relative bg-black flex items-center justify-center">
+        <div className="w-full max-w-md aspect-[9/16] bg-muted/20 rounded-xl overflow-hidden relative">
+          <Skeleton className="absolute inset-0" />
+          <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-36" />
+              </div>
+            </div>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+          <div className="absolute right-4 bottom-32 space-y-6">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+          </div>
+        </div>
       </div>
     );
   }

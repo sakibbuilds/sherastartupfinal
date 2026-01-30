@@ -52,6 +52,8 @@ import {
 } from '@/components/ui/collapsible';
 
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StartupCardSkeleton } from '@/components/skeletons';
 
 interface University {
   id: string;
@@ -341,8 +343,26 @@ const Startups = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="px-6 md:px-10 py-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32 rounded-lg" />
+        </div>
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="hidden md:block w-64 space-y-4">
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </div>
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <StartupCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

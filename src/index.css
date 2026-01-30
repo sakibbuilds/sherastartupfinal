@@ -134,27 +134,22 @@
     @apply text-foreground/80 leading-relaxed;
   }
 
+  /* Hide scrollbars globally */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--slate));
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--primary));
+    width: 0px;
+    height: 0px;
+    display: none;
   }
 
   * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--slate)) hsl(var(--muted));
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  /* Keep scrolling functional */
+  .scroll-container {
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   ::selection {

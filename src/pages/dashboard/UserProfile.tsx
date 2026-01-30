@@ -31,7 +31,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { AvatarWithPresence, OnlineIndicator } from '@/components/common/OnlineIndicator';
 
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
-
+import { ProfileSkeleton } from '@/components/skeletons';
 interface MutualConnection {
   user_id: string;
   full_name: string;
@@ -609,8 +609,8 @@ const UserProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-20 lg:pb-10">
+        <ProfileSkeleton />
       </div>
     );
   }

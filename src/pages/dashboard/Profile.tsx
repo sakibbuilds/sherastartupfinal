@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Save, X, Plus, Camera, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AvatarCropper } from '@/components/common/AvatarCropper';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Profile {
   id: string;
@@ -206,8 +207,39 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-20 lg:pb-6">
+        <Skeleton className="h-8 w-32 mb-6" />
+        <Card className="glass-card">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-center gap-6">
+              <Skeleton className="h-24 w-24 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-32 rounded-lg" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TrendingStartupsProps {
   displayMode?: 'list' | 'carousel';
@@ -12,12 +13,14 @@ interface TrendingStartupsProps {
 export const TrendingStartups = forwardRef<HTMLDivElement, TrendingStartupsProps>(({ displayMode = 'list' }, ref) => {
   const navigate = useNavigate();
   const [startups, setStartups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStartups();
   }, []);
 
   const fetchStartups = async () => {
+    setLoading(true);
     const { data } = await supabase
       .from('startups')
       .select('id, name, logo_url, tagline, views')
@@ -25,7 +28,29 @@ export const TrendingStartups = forwardRef<HTMLDivElement, TrendingStartupsProps
       .limit(displayMode === 'carousel' ? 8 : 5);
 
     if (data) setStartups(data);
+    setLoading(false);
   };
+
+  if (loading) {
+    return (
+      <Card ref={ref} className="glass-card">
+        <CardHeader className="pb-3">
+          <Skeleton className="h-4 w-36" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (startups.length === 0) return null;
 
