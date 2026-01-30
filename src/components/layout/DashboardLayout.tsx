@@ -63,6 +63,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { usePresence } from '@/hooks/usePresence';
+import sheraIcon from '@/assets/shera-icon.png';
 
 interface NavItem {
   icon: React.ElementType;
@@ -713,14 +714,19 @@ const DashboardLayout = () => {
              )}
              onClick={() => navigate('/dashboard')}
           >
-            <img 
-              src="/logo.png" 
-              alt="SheraStartup" 
-              className={cn(
-                "object-contain transition-all duration-300",
-                sidebarCollapsed ? "h-8 w-8" : "h-10 w-auto max-w-[180px]"
-              )} 
-            />
+            {sidebarCollapsed ? (
+              <img 
+                src={sheraIcon} 
+                alt="SheraStartup" 
+                className="h-10 w-10 object-contain transition-all duration-300"
+              />
+            ) : (
+              <img 
+                src="/logo.png" 
+                alt="SheraStartup" 
+                className="h-10 w-auto max-w-[180px] object-contain transition-all duration-300"
+              />
+            )}
           </div>
 
           {!sidebarCollapsed && (
