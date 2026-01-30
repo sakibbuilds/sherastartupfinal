@@ -210,117 +210,144 @@ const Messages = () => {
   }, [user]);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
+    if (!selectedConversation || !user) return;
+
+    // Initialize other user from conversation participants
+    const initOtherUser = async () => {
+      const other = selectedConversation.participants.find(p => p.user_id !== user.id);
       
-      const other = selectedConversation.participants.find(p => p.user_id !== user?.id);
       if (other) {
-        setOtherUser({ ...other.profiles, user_id: other.user_id });
-      }
-
-      // Subscribe to new messages
-      const messageChannel = supabase
-        .channel(`messages:${selectedConversation.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${selectedConversation.id}`
-          },
-          (payload) => {
-            const newMsg = payload.new as any;
-            
-            setMessages(prev => {
-              if (prev.some(m => m.id === newMsg.id)) return prev;
-              return [...prev, {
-                ...newMsg,
-                attachment_type: newMsg.attachment_type as 'image' | 'file' | 'voice' | undefined,
-                attachment_url: newMsg.attachment_url ?? undefined,
-                is_read: newMsg.is_read ?? false,
-                reactions: []
-              }];
+        // Check if we already have valid profile data
+        if (other.profiles?.full_name && other.profiles.full_name !== 'Unknown') {
+          setOtherUser({ 
+            full_name: other.profiles.full_name, 
+            avatar_url: other.profiles.avatar_url, 
+            user_id: other.user_id 
+          });
+        } else {
+          // Fetch fresh profile data if missing
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', other.user_id)
+            .maybeSingle();
+          
+          if (profile) {
+            setOtherUser({ 
+              full_name: profile.full_name || 'Unknown', 
+              avatar_url: profile.avatar_url, 
+              user_id: other.user_id 
             });
-            
-            if (newMsg.sender_id !== user?.id) {
-              markAsRead(newMsg.id);
-            }
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${selectedConversation.id}`
-          },
-          (payload) => {
-            const updatedMsg = payload.new as any;
-            setMessages(prev => prev.map(m => m.id === updatedMsg.id ? {
-              ...m,
-              ...updatedMsg,
-              reactions: m.reactions
-            } : m));
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${selectedConversation.id}`
-          },
-          (payload) => {
-            const deletedMsg = payload.old as any;
-            setMessages(prev => prev.filter(m => m.id !== deletedMsg.id));
-          }
-        )
-        .subscribe();
+        }
+      }
+    };
 
-      // Subscribe to reactions
-      const reactionsChannel = supabase
-        .channel(`reactions:${selectedConversation.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'message_reactions'
-          },
-          async () => {
-            await fetchReactionsForMessages();
+    initOtherUser();
+    fetchMessages(selectedConversation.id);
+
+    // Subscribe to new messages
+    const messageChannel = supabase
+      .channel(`messages:${selectedConversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          
+          setMessages(prev => {
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, {
+              ...newMsg,
+              attachment_type: newMsg.attachment_type as 'image' | 'file' | 'voice' | undefined,
+              attachment_url: newMsg.attachment_url ?? undefined,
+              is_read: newMsg.is_read ?? false,
+              reactions: []
+            }];
+          });
+          
+          if (newMsg.sender_id !== user?.id) {
+            markAsRead(newMsg.id);
           }
-        )
-        .subscribe();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        },
+        (payload) => {
+          const updatedMsg = payload.new as any;
+          setMessages(prev => prev.map(m => m.id === updatedMsg.id ? {
+            ...m,
+            ...updatedMsg,
+            reactions: m.reactions
+          } : m));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        },
+        (payload) => {
+          const deletedMsg = payload.old as any;
+          setMessages(prev => prev.filter(m => m.id !== deletedMsg.id));
+        }
+      )
+      .subscribe();
 
-      // Subscribe to typing presence
-      const typingChannel = supabase
-        .channel(`typing:${selectedConversation.id}`)
-        .on('presence', { event: 'sync' }, () => {
-          const state = typingChannel.presenceState();
-          const otherTyping = Object.values(state).flat().some(
-            (presence: any) => presence.user_id !== user?.id && presence.is_typing
-          );
-          setIsTyping(otherTyping);
-        })
-        .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await typingChannel.track({ user_id: user?.id, is_typing: false });
-          }
-        });
+    // Subscribe to reactions
+    const reactionsChannel = supabase
+      .channel(`reactions:${selectedConversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reactions'
+        },
+        async () => {
+          await fetchReactionsForMessages();
+        }
+      )
+      .subscribe();
 
-      typingChannelRef.current = typingChannel;
+    // Subscribe to typing presence
+    const typingChannel = supabase
+      .channel(`typing:${selectedConversation.id}`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = typingChannel.presenceState();
+        const otherTyping = Object.values(state).flat().some(
+          (presence: any) => presence.user_id !== user?.id && presence.is_typing
+        );
+        setIsTyping(otherTyping);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await typingChannel.track({ user_id: user?.id, is_typing: false });
+        }
+      });
 
-      return () => {
-        supabase.removeChannel(messageChannel);
-        supabase.removeChannel(reactionsChannel);
-        supabase.removeChannel(typingChannel);
-        typingChannelRef.current = null;
-      };
-    }
+    typingChannelRef.current = typingChannel;
+
+    return () => {
+      supabase.removeChannel(messageChannel);
+      supabase.removeChannel(reactionsChannel);
+      supabase.removeChannel(typingChannel);
+      typingChannelRef.current = null;
+    };
   }, [selectedConversation, user]);
 
   useEffect(() => {
@@ -438,33 +465,46 @@ const Messages = () => {
     const loadSelectedConversation = async () => {
       if (!conversationIdParam || !user) return;
       
-      // Always fetch fresh participant data to ensure we have correct profiles
-      const { data: participantsData } = await supabase
+      // Always fetch fresh participant data with profiles using a join query
+      const { data: participantsData, error: participantsError } = await supabase
         .from('conversation_participants')
         .select('user_id')
         .eq('conversation_id', conversationIdParam);
 
+      if (participantsError) {
+        console.error('Error fetching participants:', participantsError);
+        setLoading(false);
+        return;
+      }
+
       if (participantsData && participantsData.length > 0) {
+        // Get conversation metadata
         const { data: convData } = await supabase
           .from('conversations')
           .select('id, updated_at')
           .eq('id', conversationIdParam)
           .maybeSingle();
 
-        const participantsWithProfiles = await Promise.all(
-          participantsData.map(async (p) => {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name, avatar_url')
-              .eq('user_id', p.user_id)
-              .maybeSingle();
-            
-            return {
-              user_id: p.user_id,
-              profiles: profile || { full_name: 'Unknown', avatar_url: null }
-            };
-          })
+        // Fetch all participant profiles in one query
+        const userIds = participantsData.map(p => p.user_id);
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url')
+          .in('user_id', userIds);
+
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+        }
+
+        // Map profiles to participants
+        const profilesMap = new Map(
+          (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
         );
+
+        const participantsWithProfiles = participantsData.map(p => ({
+          user_id: p.user_id,
+          profiles: profilesMap.get(p.user_id) || { full_name: 'Unknown', avatar_url: null }
+        }));
 
         const newConv: Conversation = {
           id: conversationIdParam,
@@ -473,13 +513,19 @@ const Messages = () => {
           lastMessage: undefined
         };
 
-        setSelectedConversation(newConv);
-        
-        // Set otherUser directly here to avoid race conditions
+        // Find the other user (not current user)
         const other = participantsWithProfiles.find(p => p.user_id !== user.id);
-        if (other) {
-          setOtherUser({ ...other.profiles, user_id: other.user_id });
+        
+        // Set otherUser BEFORE setting selectedConversation to prevent showing "User"
+        if (other && other.profiles) {
+          setOtherUser({ 
+            full_name: other.profiles.full_name || 'Unknown', 
+            avatar_url: other.profiles.avatar_url, 
+            user_id: other.user_id 
+          });
         }
+
+        setSelectedConversation(newConv);
         
         setConversations(prev => {
           const existingIndex = prev.findIndex(c => c.id === newConv.id);
