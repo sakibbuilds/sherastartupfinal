@@ -13,6 +13,7 @@ import { UniversityStartups } from '@/components/dashboard/widgets/UniversitySta
 import { TrendingTopics } from '@/components/dashboard/widgets/TrendingTopics';
 import { AdBanner } from '@/components/dashboard/widgets/AdBanner';
 import { CreatePost } from '@/components/dashboard/widgets/CreatePost';
+import { PitchVideoCarousel } from '@/components/dashboard/widgets/PitchVideoCarousel';
 import { PostCard, Post } from '@/components/dashboard/PostCard';
 import { toast } from '@/hooks/use-toast';
 import { FeedSkeleton, WidgetSkeleton } from '@/components/skeletons';
@@ -202,14 +203,17 @@ const Feed = () => {
                   />
                 </motion.div>
 
+                {/* Pitch Video Carousel - After 2nd post */}
+                {index === 2 && <PitchVideoCarousel />}
+
                 {/* Mobile Widgets Injection */}
                 <div className="lg:hidden">
                   {index === 1 && <SuggestedFounders displayMode="carousel" />}
-                  {index === 3 && <AdBanner />}
-                  {index === 4 && <TrendingStartups displayMode="carousel" />}
-                  {index === 7 && <UniversityNetwork displayMode="carousel" />}
-                  {index === 10 && <UniversityStartups displayMode="carousel" />}
-                  {index === 13 && <TrendingTopics displayMode="carousel" />}
+                  {index === 4 && <AdBanner />}
+                  {index === 5 && <TrendingStartups displayMode="carousel" />}
+                  {index === 8 && <UniversityNetwork displayMode="carousel" />}
+                  {index === 11 && <UniversityStartups displayMode="carousel" />}
+                  {index === 14 && <TrendingTopics displayMode="carousel" />}
                 </div>
               </div>
             ))}
