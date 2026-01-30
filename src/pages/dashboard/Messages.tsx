@@ -438,14 +438,7 @@ const Messages = () => {
     const loadSelectedConversation = async () => {
       if (!conversationIdParam || !user) return;
       
-      const existing = conversations.find(c => c.id === conversationIdParam);
-      if (existing) {
-        setSelectedConversation(existing);
-        return;
-      }
-
-      setLoading(true);
-
+      // Always fetch fresh participant data to ensure we have correct profiles
       const { data: participantsData } = await supabase
         .from('conversation_participants')
         .select('user_id')
@@ -481,8 +474,21 @@ const Messages = () => {
         };
 
         setSelectedConversation(newConv);
+        
+        // Set otherUser directly here to avoid race conditions
+        const other = participantsWithProfiles.find(p => p.user_id !== user.id);
+        if (other) {
+          setOtherUser({ ...other.profiles, user_id: other.user_id });
+        }
+        
         setConversations(prev => {
-          if (prev.find(c => c.id === newConv.id)) return prev;
+          const existingIndex = prev.findIndex(c => c.id === newConv.id);
+          if (existingIndex >= 0) {
+            // Update existing conversation with fresh data
+            const updated = [...prev];
+            updated[existingIndex] = newConv;
+            return updated;
+          }
           return [newConv, ...prev];
         });
       } else {
@@ -514,6 +520,11 @@ const Messages = () => {
           };
 
           setSelectedConversation(newConv);
+          setOtherUser({ 
+            full_name: fallbackProfile.full_name, 
+            avatar_url: fallbackProfile.avatar_url, 
+            user_id: fallbackProfile.user_id 
+          });
           setConversations(prev => {
             if (prev.find(c => c.id === newConv.id)) return prev;
             return [newConv, ...prev];
@@ -525,8 +536,11 @@ const Messages = () => {
       setLoading(false);
     };
 
-    loadSelectedConversation();
-  }, [conversationIdParam, conversations, user]);
+    if (conversationIdParam) {
+      setLoading(true);
+      loadSelectedConversation();
+    }
+  }, [conversationIdParam, user]);
 
   const fetchMessages = async (conversationId: string) => {
     const { data } = await supabase
