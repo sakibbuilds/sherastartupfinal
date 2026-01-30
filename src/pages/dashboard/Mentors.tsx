@@ -171,47 +171,56 @@ const Mentors = () => {
       return;
     }
 
-    // Check if conversation exists
-    const { data: existingConversation } = await supabase
+    // STEP 1: Check if conversation already exists
+    const { data: myConversations } = await supabase
       .from('conversation_participants')
       .select('conversation_id')
       .eq('user_id', user.id);
 
-    if (existingConversation) {
-      for (const conv of existingConversation) {
-        const { data: otherParticipant } = await supabase
-          .from('conversation_participants')
-          .select('user_id')
-          .eq('conversation_id', conv.conversation_id)
-          .eq('user_id', mentorId)
-          .single();
+    if (myConversations && myConversations.length > 0) {
+      const conversationIds = myConversations.map(c => c.conversation_id);
+      
+      // Find shared conversation with the mentor
+      const { data: sharedConversations } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', mentorId)
+        .in('conversation_id', conversationIds)
+        .limit(1);
 
-        if (otherParticipant) {
-          navigate('/dashboard/messages');
-          return;
-        }
+      if (sharedConversations && sharedConversations.length > 0) {
+        navigate(`/dashboard/messages?conversationId=${sharedConversations[0].conversation_id}`);
+        return;
       }
     }
 
-    // Create new conversation
-    const { data: newConversation, error: convError } = await supabase
+    // STEP 2: Create new conversation
+    const newConversationId = crypto.randomUUID();
+    
+    const { error: convError } = await supabase
       .from('conversations')
-      .insert({})
-      .select()
-      .single();
+      .insert({ id: newConversationId });
 
-    if (convError || !newConversation) {
+    if (convError) {
       toast({ title: 'Error', description: 'Failed to start conversation', variant: 'destructive' });
       return;
     }
 
     // Add participants
-    await supabase.from('conversation_participants').insert([
-      { conversation_id: newConversation.id, user_id: user.id },
-      { conversation_id: newConversation.id, user_id: mentorId }
-    ]);
+    const { error: participantError } = await supabase
+      .from('conversation_participants')
+      .insert([
+        { conversation_id: newConversationId, user_id: user.id },
+        { conversation_id: newConversationId, user_id: mentorId }
+      ]);
 
-    navigate('/dashboard/messages');
+    if (participantError) {
+      console.error('Error adding participants:', participantError);
+      toast({ title: 'Error', description: 'Failed to add participants', variant: 'destructive' });
+      return;
+    }
+
+    navigate(`/dashboard/messages?conversationId=${newConversationId}`);
   };
 
   if (loading) {

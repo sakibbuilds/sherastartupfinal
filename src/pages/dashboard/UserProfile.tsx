@@ -520,41 +520,43 @@ const UserProfilePage = () => {
   };
 
   const handleMessage = async () => {
-    if (!user || !userId) return;
+    if (!user || !userId || !profile) return;
 
-    // Check if conversation exists using a more efficient query
-    const { data: myConversations } = await supabase
+    // STEP 1: Check if conversation already exists between these two users
+    // First get all conversations the current user is in
+    const { data: myConversations, error: myConvError } = await supabase
       .from('conversation_participants')
       .select('conversation_id')
       .eq('user_id', user.id);
 
+    if (myConvError) {
+      console.error('Error fetching my conversations:', myConvError);
+    }
+
     if (myConversations && myConversations.length > 0) {
       const conversationIds = myConversations.map(c => c.conversation_id);
       
-      const { data: sharedConversation } = await supabase
+      // Find any conversation where the target user is also a participant
+      // Use .limit(1) instead of .maybeSingle() to avoid errors with multiple matches
+      const { data: sharedConversations, error: sharedError } = await supabase
         .from('conversation_participants')
         .select('conversation_id')
         .eq('user_id', userId)
         .in('conversation_id', conversationIds)
-        .maybeSingle();
+        .limit(1);
 
-      if (sharedConversation) {
-        navigate(`/dashboard/messages?conversationId=${sharedConversation.conversation_id}`);
+      if (sharedError) {
+        console.error('Error checking shared conversations:', sharedError);
+      }
+
+      // If we found an existing conversation, navigate to it
+      if (sharedConversations && sharedConversations.length > 0) {
+        navigate(`/dashboard/messages?conversationId=${sharedConversations[0].conversation_id}`);
         return;
       }
     }
 
-    // Try RPC function first (best for RLS) - but it might not exist in the database
-    // Using 'as any' to bypass TypeScript check since the function may or may not be created
-    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('create_new_conversation', { other_user_id: userId });
-
-    if (!rpcError && rpcData) {
-      navigate(`/dashboard/messages?conversationId=${rpcData}`);
-      return;
-    }
-
-    // Fallback: Create manually if RPC fails (e.g. function not defined yet)
-    // We generate ID client-side and insert WITHOUT selecting back to avoid RLS "view" policies
+    // STEP 2: No existing conversation found, create a new one
     const newConversationId = crypto.randomUUID();
     
     const { error: createError } = await supabase
@@ -589,11 +591,7 @@ const UserProfilePage = () => {
       return;
     }
 
-    // Small delay to ensure RLS policies propagate/cache clears
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Pass the profile info to the messages page via state so it can display immediately
-    // even if the DB fetch for the conversation list fails (fallback mechanism)
+    // Navigate with profile fallback for immediate display
     navigate(`/dashboard/messages?conversationId=${newConversationId}`, {
       state: {
         fallbackProfile: {
