@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Loader2, MessageSquare, ArrowLeft, Check, CheckCheck, Paperclip, Image as ImageIcon, FileIcon, Download, X, Smile, Reply, CornerUpLeft, Mic, MicOff, Square, Play, Pause, Search, Pencil, Trash2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format, differenceInMinutes } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -978,8 +979,43 @@ const Messages = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="h-[calc(100vh-4rem)] lg:h-screen flex">
+        {/* Conversations List Skeleton */}
+        <div className="w-full lg:w-80 border-r border-white/10 flex flex-col">
+          <div className="p-4 border-b border-white/10 h-[73px] flex items-center">
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <div className="flex-1 p-2 space-y-2">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+                <Skeleton className="h-3 w-12" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Chat Area Skeleton */}
+        <div className="hidden lg:flex flex-1 flex-col">
+          <div className="h-[73px] border-b border-white/10 flex items-center px-4 gap-3">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+          <div className="flex-1 p-4 space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`flex gap-3 ${i % 2 === 0 ? 'justify-end' : ''}`}>
+                {i % 2 !== 0 && <Skeleton className="h-10 w-10 rounded-full shrink-0" />}
+                <Skeleton className={`h-16 ${i % 2 === 0 ? 'w-48' : 'w-64'} rounded-2xl`} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

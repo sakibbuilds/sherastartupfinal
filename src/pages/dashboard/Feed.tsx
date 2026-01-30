@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Widgets
@@ -16,6 +15,7 @@ import { AdBanner } from '@/components/dashboard/widgets/AdBanner';
 import { CreatePost } from '@/components/dashboard/widgets/CreatePost';
 import { PostCard, Post } from '@/components/dashboard/PostCard';
 import { toast } from '@/hooks/use-toast';
+import { FeedSkeleton, WidgetSkeleton } from '@/components/skeletons';
 
 const Feed = () => {
   const { user } = useAuth();
@@ -151,8 +151,20 @@ const Feed = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-20 lg:pb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="hidden lg:block space-y-6">
+            <WidgetSkeleton />
+            <WidgetSkeleton />
+          </div>
+          <div className="lg:col-span-2">
+            <FeedSkeleton />
+          </div>
+          <div className="hidden lg:block space-y-6">
+            <WidgetSkeleton />
+            <WidgetSkeleton />
+          </div>
+        </div>
       </div>
     );
   }

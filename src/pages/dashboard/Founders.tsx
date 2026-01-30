@@ -54,6 +54,8 @@ interface Startup {
 }
 
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { UserCardSkeleton } from '@/components/skeletons';
 
 const Founders = () => {
   const navigate = useNavigate();

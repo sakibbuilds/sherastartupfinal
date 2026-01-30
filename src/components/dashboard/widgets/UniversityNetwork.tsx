@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { GraduationCap } from 'lucide-react';
 import { UserBadges } from '@/components/common/UserBadges';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface UniversityNetworkProps {
   displayMode?: 'list' | 'carousel';
@@ -17,12 +18,14 @@ export const UniversityNetwork = forwardRef<HTMLDivElement, UniversityNetworkPro
   const { user } = useAuth();
   const [network, setNetwork] = useState<any[]>([]);
   const [university, setUniversity] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) fetchNetwork();
   }, [user]);
 
   const fetchNetwork = async () => {
+    setLoading(true);
     // First get user's university
     const { data: userData } = await supabase
       .from('profiles')
@@ -42,7 +45,29 @@ export const UniversityNetwork = forwardRef<HTMLDivElement, UniversityNetworkPro
 
       if (data) setNetwork(data);
     }
+    setLoading(false);
   };
+
+  if (loading) {
+    return (
+      <Card ref={ref} className="glass-card">
+        <CardHeader className="pb-3">
+          <Skeleton className="h-4 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!university || network.length === 0) return null;
 
