@@ -33,6 +33,7 @@ const Match = () => {
   
   const [activeTab, setActiveTab] = useState('find');
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [allUsers, setAllUsers] = useState<Profile[]>([]);
   const [connections, setConnections] = useState<Profile[]>([]);
   const [requests, setRequests] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -40,6 +41,7 @@ const Match = () => {
   const [direction, setDirection] = useState<'left' | 'right' | null>(null);
   const [lastAction, setLastAction] = useState<{ profile: Profile; action: 'like' | 'pass' } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
 
   useEffect(() => {
     if (location.pathname.includes('/connections')) setActiveTab('connections');
@@ -58,7 +60,23 @@ const Match = () => {
     if (activeTab === 'find') await fetchProfiles();
     else if (activeTab === 'connections') await fetchConnections();
     else if (activeTab === 'requests') await fetchRequests();
+    // Always fetch all users for search
+    await fetchAllUsers();
     setLoading(false);
+  };
+
+  const fetchAllUsers = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, user_id, full_name, avatar_url, title, bio, university, expertise, verified')
+      .neq('user_id', user.id)
+      .limit(100);
+    
+    if (data) {
+      setAllUsers(data);
+    }
   };
 
   const fetchProfiles = async () => {
@@ -285,17 +303,123 @@ const Match = () => {
     );
   }, [connections, searchQuery]);
 
+  // Filter all users for global search
+  const filteredAllUsers = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return allUsers.filter(p => 
+      p.full_name?.toLowerCase().includes(query) ||
+      p.title?.toLowerCase().includes(query) ||
+      p.university?.toLowerCase().includes(query) ||
+      p.expertise?.some(e => e.toLowerCase().includes(query))
+    );
+  }, [allUsers, searchQuery]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 pb-20 lg:pb-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Network</h1>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setShowGlobalSearch(!showGlobalSearch)}
+          className="gap-2"
+        >
+          <Search className="h-4 w-4" />
+          Search All Users
+        </Button>
       </div>
+
+      {/* Global User Search */}
+      <AnimatePresence>
+        {showGlobalSearch && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mb-6"
+          >
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search all users by name, title, university, or skills..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-white/5 border-white/10"
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                {searchQuery.length >= 2 && (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Found {filteredAllUsers.length} user{filteredAllUsers.length !== 1 ? 's' : ''}
+                    </p>
+                    {filteredAllUsers.length > 0 ? (
+                      <div className="grid gap-3 max-h-[300px] overflow-y-auto">
+                        {filteredAllUsers.slice(0, 10).map((profile) => (
+                          <div 
+                            key={profile.id} 
+                            className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/dashboard/profile/${profile.user_id}`)}
+                          >
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={profile.avatar_url || ''} />
+                              <AvatarFallback>{profile.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{profile.full_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{profile.title || profile.university || 'Member'}</p>
+                            </div>
+                            {profile.verified && (
+                              <Badge variant="secondary" className="text-xs">Verified</Badge>
+                            )}
+                          </div>
+                        ))}
+                        {filteredAllUsers.length > 10 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            Showing first 10 results. Refine your search for more specific results.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No users found matching "{searchQuery}"
+                      </p>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
-          <TabsTrigger value="find">Find Connections</TabsTrigger>
-          <TabsTrigger value="connections">My Connections</TabsTrigger>
-          <TabsTrigger value="requests">Requests {requests.length > 0 && `(${requests.length})`}</TabsTrigger>
+          <TabsTrigger value="find" className="gap-1">
+            <Search className="h-3 w-3" />
+            Find
+          </TabsTrigger>
+          <TabsTrigger value="connections" className="gap-1">
+            <Users className="h-3 w-3" />
+            Connections
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="gap-1">
+            <UserPlus className="h-3 w-3" />
+            Requests {requests.length > 0 && `(${requests.length})`}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="find" className="space-y-4">
