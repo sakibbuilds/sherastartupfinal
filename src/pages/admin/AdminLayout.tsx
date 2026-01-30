@@ -8,7 +8,8 @@ import {
   LogOut,
   Menu,
   X,
-  GraduationCap
+  GraduationCap,
+  Megaphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -55,6 +56,7 @@ const AdminLayout = () => {
     { label: 'Startups', icon: Rocket, path: '/admin/startups' },
     { label: 'Verification', icon: ShieldCheck, path: '/admin/verification' },
     { label: 'Mentors', icon: GraduationCap, path: '/admin/mentors' },
+    { label: 'Advertisements', icon: Megaphone, path: '/admin/advertisements' },
   ];
 
   return (

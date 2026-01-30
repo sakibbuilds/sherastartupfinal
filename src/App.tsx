@@ -46,6 +46,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminStartups from "./pages/admin/AdminStartups";
 import AdminVerification from "./pages/admin/AdminVerification";
 import AdminMentors from "./pages/admin/AdminMentors";
+import AdminAds from "./pages/admin/AdminAdvertisements";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
                 <Route path="startups" element={<AdminStartups />} />
                 <Route path="mentors" element={<AdminMentors />} />
                 <Route path="verification" element={<AdminVerification />} />
+                <Route path="advertisements" element={<AdminAds />} />
               </Route>
 
               <Route path="/dashboard" element={<DashboardLayout />}>
