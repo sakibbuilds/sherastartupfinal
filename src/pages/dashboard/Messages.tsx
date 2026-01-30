@@ -1593,7 +1593,7 @@ const Messages = () => {
             </AnimatePresence>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-white/10 bg-background/50 backdrop-blur-sm">
+            <div className="p-4 border-t border-white/10 bg-background/50 backdrop-blur-sm pb-24 lg:pb-4">
               <div className="flex gap-2 items-end">
                 <Popover>
                   <PopoverTrigger asChild>
