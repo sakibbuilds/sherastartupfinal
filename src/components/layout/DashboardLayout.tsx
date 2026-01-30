@@ -57,6 +57,7 @@ import {
   Presentation
 } from 'lucide-react';
 import { UserBadges } from '@/components/common/UserBadges';
+import { GlobalSearch } from '@/components/common/GlobalSearch';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -928,10 +929,15 @@ const DashboardLayout = () => {
       {/* Desktop Header (right of sidebar) */}
       <header 
         className={cn(
-          "hidden lg:flex items-center justify-end h-16 px-6 border-b border-border bg-background/80 backdrop-blur-md fixed top-0 right-0 z-40 transition-all duration-300",
+          "hidden lg:flex items-center justify-between h-16 px-6 border-b border-border bg-background/80 backdrop-blur-md fixed top-0 right-0 z-40 transition-all duration-300",
           sidebarCollapsed ? "left-20" : "left-72"
         )}
       >
+        {/* Global Search */}
+        <div className="flex-1 max-w-md">
+          <GlobalSearch variant="compact" placeholder="Search users, startups, posts..." />
+        </div>
+
         <div className="flex items-center gap-3">
           {/* Online Users Count */}
           {onlineCount > 1 && (
@@ -1118,9 +1124,12 @@ const DashboardLayout = () => {
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <AlignLeft className="h-6 w-6" />
           </Button>
-          <div className="flex items-center gap-2" onClick={() => navigate('/dashboard')}>
-            <img src="/logo.png" alt="SheraStartup" className="h-8 w-auto object-contain" />
+          
+          {/* Mobile Search */}
+          <div className="flex-1 mx-3">
+            <GlobalSearch variant="compact" placeholder="Search..." />
           </div>
+          
           <div className="flex items-center gap-1">
             {/* Messages Dropdown */}
             <DropdownMenu>
