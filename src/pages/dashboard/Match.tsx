@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { VerifiedBadge } from '@/components/common/VerifiedBadge';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -38,6 +39,7 @@ const Match = () => {
   const [loading, setLoading] = useState(true);
   const [direction, setDirection] = useState<'left' | 'right' | null>(null);
   const [lastAction, setLastAction] = useState<{ profile: Profile; action: 'like' | 'pass' } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (location.pathname.includes('/connections')) setActiveTab('connections');
@@ -164,8 +166,21 @@ const Match = () => {
       console.error('Error creating match:', error);
     }
 
-    // Check for mutual match
+    // Send notification when swiping right (like)
     if (action === 'like') {
+      // Send connection request notification
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: currentProfile.user_id,
+          type: 'connection_request',
+          title: 'New Connection Request',
+          message: `${user.user_metadata?.full_name || 'Someone'} wants to connect with you.`,
+          reference_id: user.id,
+          reference_type: 'profile'
+        });
+
+      // Check for mutual match
       const { data: mutualMatch } = await supabase
         .from('matches')
         .select('*')
@@ -184,6 +199,10 @@ const Match = () => {
         toast({
           title: "It's a Match! 🎉",
           description: `You and ${currentProfile.full_name} liked each other!`,
+        });
+      } else {
+        toast({
+          description: `Connection request sent to ${currentProfile.full_name}!`,
         });
       }
     }
@@ -254,6 +273,17 @@ const Match = () => {
   };
 
   const currentProfile = profiles[currentIndex];
+
+  // Filter connections by search query
+  const filteredConnections = useMemo(() => {
+    if (!searchQuery.trim()) return connections;
+    const query = searchQuery.toLowerCase();
+    return connections.filter(p => 
+      p.full_name?.toLowerCase().includes(query) ||
+      p.title?.toLowerCase().includes(query) ||
+      p.university?.toLowerCase().includes(query)
+    );
+  }, [connections, searchQuery]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 pb-20 lg:pb-6">
@@ -417,21 +447,46 @@ const Match = () => {
         </TabsContent>
 
         <TabsContent value="connections" className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative max-w-md mx-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search connections..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-white/5 border-white/10"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => setSearchQuery('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
           {loading ? (
              <div className="flex items-center justify-center h-[60vh]">
                <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
-          ) : connections.length === 0 ? (
+          ) : filteredConnections.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">You haven't made any connections yet.</p>
-              <Button variant="link" onClick={() => handleTabChange('find')}>
-                Find people to connect with
-              </Button>
+              <p className="text-muted-foreground">
+                {searchQuery ? `No connections found for "${searchQuery}"` : "You haven't made any connections yet."}
+              </p>
+              {!searchQuery && (
+                <Button variant="link" onClick={() => handleTabChange('find')}>
+                  Find people to connect with
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {connections.map((profile) => (
+              {filteredConnections.map((profile) => (
                 <Card key={profile.id} className="glass-card hover:bg-white/5 transition-colors">
                   <CardContent className="p-4 flex items-center gap-4">
                      <Avatar className="h-12 w-12 cursor-pointer" onClick={() => navigate(`/dashboard/profile/${profile.user_id}`)}>
