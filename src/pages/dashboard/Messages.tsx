@@ -212,34 +212,32 @@ const Messages = () => {
   useEffect(() => {
     if (!selectedConversation || !user) return;
 
-    // Initialize other user from conversation participants
+    // Always fetch fresh profile data for the other user
     const initOtherUser = async () => {
       const other = selectedConversation.participants.find(p => p.user_id !== user.id);
       
-      if (other) {
-        // Check if we already have valid profile data
-        if (other.profiles?.full_name && other.profiles.full_name !== 'Unknown') {
-          setOtherUser({ 
-            full_name: other.profiles.full_name, 
-            avatar_url: other.profiles.avatar_url, 
-            user_id: other.user_id 
-          });
-        } else {
-          // Fetch fresh profile data if missing
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('user_id', other.user_id)
-            .maybeSingle();
-          
-          if (profile) {
-            setOtherUser({ 
-              full_name: profile.full_name || 'Unknown', 
-              avatar_url: profile.avatar_url, 
-              user_id: other.user_id 
-            });
-          }
-        }
+      if (!other) return;
+
+      // Always fetch fresh profile data to ensure we have the latest
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('user_id', other.user_id)
+        .maybeSingle();
+      
+      if (profile) {
+        setOtherUser({ 
+          full_name: profile.full_name || 'Unknown', 
+          avatar_url: profile.avatar_url, 
+          user_id: other.user_id 
+        });
+      } else {
+        // Fallback to conversation data if DB fetch fails
+        setOtherUser({ 
+          full_name: other.profiles?.full_name || 'Unknown', 
+          avatar_url: other.profiles?.avatar_url || null, 
+          user_id: other.user_id 
+        });
       }
     };
 
