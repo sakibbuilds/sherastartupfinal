@@ -141,11 +141,11 @@ const navSections: NavSection[] = [
       },
       { 
         icon: GraduationCap, 
-        label: 'Mentors', 
+        label: 'Mentorship', 
         path: '/dashboard/mentors',
         submenu: [
           { icon: Users, label: 'Browse Mentors', path: '/dashboard/mentors' },
-          { icon: Calendar, label: 'My Sessions', path: '/dashboard/mentorship' },
+          { icon: Calendar, label: 'My Bookings', path: '/dashboard/bookings' },
           { icon: Check, label: 'Become a Mentor', path: '/dashboard/mentorship/become' },
         ]
       },
@@ -616,10 +616,10 @@ const DashboardLayout = () => {
           className="w-full"
         >
           <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
+            <button
+              type="button"
               className={cn(
-                "w-full justify-between py-3 h-auto rounded-xl hover:bg-secondary/50 group transition-all duration-200",
+                "w-full flex items-center justify-between py-3 px-3 h-auto rounded-xl hover:bg-secondary/50 group transition-all duration-200",
                 isActive && "bg-secondary/30"
               )}
             >
@@ -640,7 +640,7 @@ const DashboardLayout = () => {
                 "h-4 w-4 text-muted-foreground transition-transform duration-200",
                 isOpen && "transform rotate-180"
               )} />
-            </Button>
+            </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-4 space-y-1 mt-1">
             {item.submenu.map((subItem) => (
