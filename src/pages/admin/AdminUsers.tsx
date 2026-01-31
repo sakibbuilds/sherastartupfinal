@@ -46,8 +46,6 @@ const AdminUsers = () => {
   };
 
   const handleVerifyUser = async (userId: string, currentStatus: boolean) => {
-    // Attempt to toggle verified status
-    // Note: Requires 'verified' column in profiles table
     try {
       const { error } = await supabase
         .from('profiles')
@@ -78,23 +76,21 @@ const AdminUsers = () => {
     if (!confirm('Are you sure you want to ban/remove this user? This action cannot be undone.')) return;
 
     try {
-      // Delete from auth (requires admin api usually) or just delete profile to "ban" them from app logic
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
 
       if (error) throw error;
 
       setUsers(users.filter(u => u.user_id !== userId));
       toast({
         title: "User Removed",
-        description: "User has been banned and data removed."
+        description: "User has been successfully removed from the platform."
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to remove user. Check permissions.",
+        description: `Failed to remove user: ${(error as Error).message}`,
         variant: "destructive"
       });
     }

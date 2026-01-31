@@ -9,7 +9,8 @@ import {
   Menu,
   X,
   GraduationCap,
-  Megaphone
+  Megaphone,
+  MessageSquare // Added for Posts
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -30,7 +31,6 @@ const AdminLayout = () => {
       navigate('/admin/login');
     }
     
-    // Fetch pending count
     const fetchPending = async () => {
       const { count } = await supabase
         .from('verification_requests')
@@ -41,8 +41,6 @@ const AdminLayout = () => {
     };
 
     fetchPending();
-
-    // Optional: Realtime subscription could go here
   }, [navigate]);
 
   const handleLogout = () => {
@@ -54,6 +52,7 @@ const AdminLayout = () => {
     { label: 'Overview', icon: LayoutDashboard, path: '/admin/dashboard' },
     { label: 'Users', icon: Users, path: '/admin/users' },
     { label: 'Startups', icon: Rocket, path: '/admin/startups' },
+    { label: 'Posts', icon: MessageSquare, path: '/admin/posts' }, // Added Posts link
     { label: 'Verification', icon: ShieldCheck, path: '/admin/verification' },
     { label: 'Mentors', icon: GraduationCap, path: '/admin/mentors' },
     { label: 'Advertisements', icon: Megaphone, path: '/admin/advertisements' },
@@ -93,7 +92,7 @@ const AdminLayout = () => {
 
           <nav className="space-y-2 flex-1">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive = location.pathname.startsWith(item.path);
               return (
                 <Link
                   key={item.path}
