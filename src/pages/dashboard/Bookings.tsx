@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -23,6 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { 
   Calendar as CalendarIcon, 
@@ -31,14 +34,18 @@ import {
   Video, 
   CheckCircle, 
   XCircle,
-  User
+  User,
+  Link as LinkIcon,
+  MessageSquare,
+  ExternalLink,
+  Copy
 } from 'lucide-react';
-import { format, addDays, setHours, setMinutes, isBefore, startOfDay } from 'date-fns';
+import { format, setHours, setMinutes, isBefore, startOfDay } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
 import { UserBadges } from '@/components/common/UserBadges';
 import { Skeleton } from '@/components/ui/skeleton';
+
 interface Mentor {
   id: string;
   user_id: string;
@@ -58,6 +65,7 @@ interface Booking {
   duration_minutes: number;
   status: string;
   notes: string | null;
+  meeting_link: string | null;
   mentor: {
     full_name: string;
     avatar_url: string | null;
@@ -87,13 +95,18 @@ const Bookings = () => {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userType, setUserType] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ user_type: string | null; is_mentor: boolean } | null>(null);
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [bookingNotes, setBookingNotes] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Meeting link dialog state
+  const [meetingLinkDialogOpen, setMeetingLinkDialogOpen] = useState(false);
+  const [selectedBookingForLink, setSelectedBookingForLink] = useState<Booking | null>(null);
+  const [meetingLinkInput, setMeetingLinkInput] = useState('');
 
   useEffect(() => {
     fetchMentors();
@@ -107,44 +120,39 @@ const Bookings = () => {
     if (!user) return;
     const { data } = await supabase
       .from('profiles')
-      .select('user_type')
+      .select('user_type, is_mentor')
       .eq('user_id', user.id)
       .single();
     
     if (data) {
-      setUserType(data.user_type);
+      setUserProfile(data);
     }
   };
 
   const fetchMentors = async () => {
-    // Fetch available mentors from profiles
     const { data: mentorsData, error } = await supabase
       .from('profiles')
-      .select('user_id, full_name, avatar_url, title, verified, is_mentor, expertise, bio')
+      .select('user_id, full_name, avatar_url, title, verified, is_mentor, expertise, bio, hourly_rate')
       .eq('is_mentor', true);
 
     if (error) {
       console.error('Error fetching mentors:', error);
-      // If the column doesn't exist yet, we can't fetch mentors properly.
-      // We'll just set an empty list to avoid crashing the UI.
-      if (error.code === '42703') { // Undefined column
-         // Fallback: If we can't filter by is_mentor, we could fetch all users or just show empty.
-         // Showing empty is safer until migration is run.
-         setMentors([]);
-         setLoading(false);
-         return;
+      if (error.code === '42703') {
+        setMentors([]);
+        setLoading(false);
+        return;
       }
     }
 
     if (mentorsData) {
       const formattedMentors = mentorsData.map((m: any) => ({
-        id: m.user_id, // Use user_id as id for consistency
+        id: m.user_id,
         user_id: m.user_id,
         full_name: m.full_name,
         avatar_url: m.avatar_url,
         title: m.title,
         expertise: m.expertise,
-        hourly_rate: 100, // Default or mock value since it's not in profiles yet
+        hourly_rate: m.hourly_rate || 100,
         bio: m.bio,
         verified: m.verified,
         is_mentor: m.is_mentor
@@ -157,7 +165,6 @@ const Bookings = () => {
   const fetchBookings = async () => {
     if (!user) return;
 
-    // Fetch bookings
     const { data: bookingsData } = await supabase
       .from('bookings')
       .select('*')
@@ -165,40 +172,38 @@ const Bookings = () => {
       .order('scheduled_at', { ascending: true });
 
     if (bookingsData) {
-      // Get all unique user IDs involved
       const userIds = new Set<string>();
       bookingsData.forEach((b: any) => {
         if (b.mentee_id) userIds.add(b.mentee_id);
         if (b.mentor_id) userIds.add(b.mentor_id);
       });
       
-      // Fetch all involved profiles
-       const { data: profiles } = await supabase
-         .from('profiles')
-         .select('user_id, full_name, avatar_url, title, verified, is_mentor')
-         .in('user_id', Array.from(userIds));
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, title, verified, is_mentor')
+        .in('user_id', Array.from(userIds));
           
-       const formattedBookings = bookingsData.map((b: any) => {
-          const mentorProfile = profiles?.find(p => p.user_id === b.mentor_id);
-          const menteeProfile = profiles?.find(p => p.user_id === b.mentee_id);
-          
-          return {
-            ...b,
-            mentor: {
-              full_name: mentorProfile?.full_name,
-              avatar_url: mentorProfile?.avatar_url,
-              title: mentorProfile?.title,
-              verified: mentorProfile?.verified,
-              is_mentor: mentorProfile?.is_mentor
-            },
-            mentee: {
-              full_name: menteeProfile?.full_name,
-              avatar_url: menteeProfile?.avatar_url,
-              verified: menteeProfile?.verified,
-              is_mentor: menteeProfile?.is_mentor
-            }
-          };
-       });
+      const formattedBookings = bookingsData.map((b: any) => {
+        const mentorProfile = profiles?.find(p => p.user_id === b.mentor_id);
+        const menteeProfile = profiles?.find(p => p.user_id === b.mentee_id);
+        
+        return {
+          ...b,
+          mentor: {
+            full_name: mentorProfile?.full_name,
+            avatar_url: mentorProfile?.avatar_url,
+            title: mentorProfile?.title,
+            verified: mentorProfile?.verified,
+            is_mentor: mentorProfile?.is_mentor
+          },
+          mentee: {
+            full_name: menteeProfile?.full_name,
+            avatar_url: menteeProfile?.avatar_url,
+            verified: menteeProfile?.verified,
+            is_mentor: menteeProfile?.is_mentor
+          }
+        };
+      });
 
       setBookings(formattedBookings);
     }
@@ -237,10 +242,15 @@ const Bookings = () => {
     setIsBooking(false);
   };
 
-  const handleUpdateBookingStatus = async (bookingId: string, status: string) => {
+  const handleUpdateBookingStatus = async (bookingId: string, status: string, meetingLink?: string) => {
+    const updateData: Record<string, any> = { status };
+    if (meetingLink) {
+      updateData.meeting_link = meetingLink;
+    }
+
     const { error } = await supabase
       .from('bookings')
-      .update({ status })
+      .update(updateData)
       .eq('id', bookingId);
 
     if (error) {
@@ -249,6 +259,73 @@ const Bookings = () => {
       toast({ title: 'Updated', description: `Booking ${status}.` });
       fetchBookings();
     }
+  };
+
+  const handleSaveMeetingLink = async () => {
+    if (!selectedBookingForLink) return;
+
+    const { error } = await supabase
+      .from('bookings')
+      .update({ meeting_link: meetingLinkInput })
+      .eq('id', selectedBookingForLink.id);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update meeting link', variant: 'destructive' });
+    } else {
+      toast({ title: 'Meeting Link Saved', description: 'The meeting link has been updated.' });
+      setMeetingLinkDialogOpen(false);
+      setSelectedBookingForLink(null);
+      setMeetingLinkInput('');
+      fetchBookings();
+    }
+  };
+
+  const copyMeetingLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    toast({ title: 'Copied!', description: 'Meeting link copied to clipboard.' });
+  };
+
+  const startConversation = async (otherUserId: string) => {
+    if (!user) return;
+
+    const { data: existingParticipants } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', user.id);
+
+    if (existingParticipants) {
+      for (const p of existingParticipants) {
+        const { data: otherParticipant } = await supabase
+          .from('conversation_participants')
+          .select('user_id')
+          .eq('conversation_id', p.conversation_id)
+          .eq('user_id', otherUserId)
+          .maybeSingle();
+
+        if (otherParticipant) {
+          navigate('/dashboard/messages');
+          return;
+        }
+      }
+    }
+
+    const { data: newConversation, error: convError } = await supabase
+      .from('conversations')
+      .insert({})
+      .select()
+      .single();
+
+    if (convError || !newConversation) {
+      toast({ title: 'Error', description: 'Failed to start conversation', variant: 'destructive' });
+      return;
+    }
+
+    await supabase.from('conversation_participants').insert([
+      { conversation_id: newConversation.id, user_id: user.id },
+      { conversation_id: newConversation.id, user_id: otherUserId }
+    ]);
+
+    navigate('/dashboard/messages');
   };
 
   const getStatusBadge = (status: string) => {
@@ -305,8 +382,8 @@ const Bookings = () => {
     <div className="max-w-4xl mx-auto px-4 py-6 pb-20 lg:pb-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Mentor Bookings</h1>
-        {userType !== 'mentor' && (
-          <Button onClick={() => navigate('/dashboard/become-mentor')}>
+        {!userProfile?.is_mentor && (
+          <Button onClick={() => navigate('/dashboard/mentorship/become')}>
             Become a Mentor
           </Button>
         )}
@@ -427,7 +504,7 @@ const Bookings = () => {
                                 placeholder="What would you like to discuss?"
                                 value={bookingNotes}
                                 onChange={(e) => setBookingNotes(e.target.value)}
-                                className="resize-none bg-white/5 border-white/10 focus:border-primary"
+                                className="resize-none"
                               />
                             </div>
 
@@ -464,6 +541,7 @@ const Bookings = () => {
             upcomingBookings.map((booking) => {
               const isMentor = booking.mentor_id === user?.id;
               const otherPerson = isMentor ? booking.mentee : booking.mentor;
+              const otherUserId = isMentor ? booking.mentee_id : booking.mentor_id;
               
               return (
                 <Card key={booking.id} className="glass-card">
@@ -476,10 +554,10 @@ const Bookings = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
                           <div className="flex items-center gap-1">
-                             <h3 className="font-semibold">{otherPerson?.full_name}</h3>
-                             <UserBadges verified={otherPerson?.verified} isMentor={otherPerson?.is_mentor} size="sm" />
+                            <h3 className="font-semibold">{otherPerson?.full_name}</h3>
+                            <UserBadges verified={otherPerson?.verified} isMentor={otherPerson?.is_mentor} size="sm" />
                           </div>
                           {getStatusBadge(booking.status)}
                         </div>
@@ -504,16 +582,73 @@ const Bookings = () => {
                           </p>
                         )}
 
-                        <div className="flex gap-2 mt-4">
+                        {/* Meeting Link Display */}
+                        {booking.meeting_link && (
+                          <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Video className="h-4 w-4 text-primary shrink-0" />
+                                <span className="text-sm font-medium truncate">{booking.meeting_link}</span>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyMeetingLink(booking.meeting_link!)}>
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" asChild>
+                                  <a href={booking.meeting_link} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {/* Pending - Mentor can confirm/decline */}
                           {booking.status === 'pending' && isMentor && (
                             <>
-                              <Button 
-                                size="sm"
-                                onClick={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Confirm
-                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button size="sm">
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Confirm
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Confirm Booking & Add Meeting Link</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="meeting-link">Meeting Link (optional)</Label>
+                                      <div className="relative">
+                                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                          id="meeting-link"
+                                          placeholder="https://meet.google.com/..."
+                                          value={meetingLinkInput}
+                                          onChange={(e) => setMeetingLinkInput(e.target.value)}
+                                          className="pl-10"
+                                        />
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">
+                                        You can add a Zoom, Google Meet, or other meeting link. You can also add this later.
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button 
+                                      onClick={() => {
+                                        handleUpdateBookingStatus(booking.id, 'confirmed', meetingLinkInput || undefined);
+                                        setMeetingLinkInput('');
+                                      }}
+                                    >
+                                      Confirm Booking
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
                               <Button 
                                 size="sm" 
                                 variant="outline"
@@ -524,11 +659,70 @@ const Bookings = () => {
                               </Button>
                             </>
                           )}
+
+                          {/* Confirmed - Show actions */}
                           {booking.status === 'confirmed' && (
-                            <Button size="sm" className="bg-primary hover:bg-primary/90">
-                              <Video className="h-4 w-4 mr-1" />
-                              Join Session
-                            </Button>
+                            <>
+                              {booking.meeting_link ? (
+                                <Button size="sm" className="bg-primary hover:bg-primary/90" asChild>
+                                  <a href={booking.meeting_link} target="_blank" rel="noopener noreferrer">
+                                    <Video className="h-4 w-4 mr-1" />
+                                    Join Session
+                                  </a>
+                                </Button>
+                              ) : isMentor ? (
+                                <Dialog open={meetingLinkDialogOpen && selectedBookingForLink?.id === booking.id} onOpenChange={(open) => {
+                                  setMeetingLinkDialogOpen(open);
+                                  if (open) {
+                                    setSelectedBookingForLink(booking);
+                                    setMeetingLinkInput(booking.meeting_link || '');
+                                  }
+                                }}>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <LinkIcon className="h-4 w-4 mr-1" />
+                                      Add Meeting Link
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Add Meeting Link</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                      <div className="space-y-2">
+                                        <Label htmlFor="edit-meeting-link">Meeting Link</Label>
+                                        <div className="relative">
+                                          <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                          <Input
+                                            id="edit-meeting-link"
+                                            placeholder="https://meet.google.com/..."
+                                            value={meetingLinkInput}
+                                            onChange={(e) => setMeetingLinkInput(e.target.value)}
+                                            className="pl-10"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <Button onClick={handleSaveMeetingLink}>
+                                        Save Link
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              ) : (
+                                <Badge variant="outline">Waiting for meeting link</Badge>
+                              )}
+
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => startConversation(otherUserId)}
+                              >
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Chat
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -564,8 +758,8 @@ const Bookings = () => {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
-                             <h3 className="font-semibold">{otherPerson?.full_name}</h3>
-                             <UserBadges verified={otherPerson?.verified} isMentor={otherPerson?.is_mentor} size="sm" />
+                            <h3 className="font-semibold">{otherPerson?.full_name}</h3>
+                            <UserBadges verified={otherPerson?.verified} isMentor={otherPerson?.is_mentor} size="sm" />
                           </div>
                           {getStatusBadge(booking.status)}
                         </div>

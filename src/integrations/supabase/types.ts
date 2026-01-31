@@ -67,6 +67,7 @@ export type Database = {
           created_at: string
           duration_minutes: number | null
           id: string
+          meeting_link: string | null
           mentee_id: string
           mentor_id: string
           notes: string | null
@@ -77,6 +78,7 @@ export type Database = {
           created_at?: string
           duration_minutes?: number | null
           id?: string
+          meeting_link?: string | null
           mentee_id: string
           mentor_id: string
           notes?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           created_at?: string
           duration_minutes?: number | null
           id?: string
+          meeting_link?: string | null
           mentee_id?: string
           mentor_id?: string
           notes?: string | null
@@ -228,6 +231,57 @@ export type Database = {
           id?: string
           matched_user_id?: string
           status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mentor_applications: {
+        Row: {
+          bio: string
+          created_at: string
+          experience_years: number | null
+          expertise: string[]
+          hourly_rate: number | null
+          id: string
+          linkedin_url: string | null
+          motivation: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio: string
+          created_at?: string
+          experience_years?: number | null
+          expertise: string[]
+          hourly_rate?: number | null
+          id?: string
+          linkedin_url?: string | null
+          motivation?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string
+          created_at?: string
+          experience_years?: number | null
+          expertise?: string[]
+          hourly_rate?: number | null
+          id?: string
+          linkedin_url?: string | null
+          motivation?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
