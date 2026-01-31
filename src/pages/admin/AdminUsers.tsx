@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Search, Trash2, CheckCircle, XCircle, MoreVertical, Shield } from 'lucide-react';
+import { Search, Trash2, CheckCircle, XCircle, MoreVertical, Loader2 } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -26,6 +26,7 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,33 +67,42 @@ const AdminUsers = () => {
       console.error('Verification update failed:', error);
       toast({
         title: "Update Failed",
-        description: "Database schema may need 'verified' column.",
+        description: "Could not update user verification status.",
         variant: "destructive"
       });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to ban/remove this user? This action cannot be undone.')) return;
+    if (!confirm('This will permanently delete the user and all their associated data (startups, pitches, etc). This action cannot be undone. Are you sure?')) return;
 
+    setDeletingUser(userId);
     try {
       const { error } = await supabase.functions.invoke('delete-user', {
         body: { userId },
       });
 
-      if (error) throw error;
+      if (error) {
+        // The error object from a function invocation might have more details
+        // in the 'context' or a nested 'error' property.
+        const errorMessage = error.context?.body?.error || error.message;
+        throw new Error(errorMessage);
+      }
 
-      setUsers(users.filter(u => u.user_id !== userId));
+      setUsers(prevUsers => prevUsers.filter(u => u.user_id !== userId));
       toast({
         title: "User Removed",
-        description: "User has been successfully removed from the platform."
+        description: "The user has been successfully removed from the platform.",
       });
     } catch (error) {
+      console.error('Deletion failed:', error);
       toast({
-        title: "Error",
-        description: `Failed to remove user: ${(error as Error).message}`,
+        title: "Deletion Failed",
+        description: `An error occurred: ${(error as Error).message}. If this persists, check the function logs in your Supabase dashboard.`,
         variant: "destructive"
       });
+    } finally {
+      setDeletingUser(null);
     }
   };
 
@@ -141,7 +151,7 @@ const AdminUsers = () => {
               </TableRow>
             ) : (
               filteredUsers.map((user) => (
-                <TableRow key={user.id} className="border-white/10 hover:bg-white/5">
+                <TableRow key={user.user_id} className={`border-white/10 hover:bg-white/5 ${deletingUser === user.user_id ? 'opacity-50 pointer-events-none' : ''}`}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
@@ -177,10 +187,10 @@ const AdminUsers = () => {
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
+                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={deletingUser === user.user_id}>
+                          {deletingUser === user.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
